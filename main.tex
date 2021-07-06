@@ -1,13 +1,135 @@
-\documentclass{article}
-\usepackage[utf8]{inputenc}
+\documentclass[11pt,twoside]{article}
+\usepackage{fullpage}
+\usepackage{epsf}
+\usepackage{fancyhdr}
+\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{psfrag}
+\usepackage{microtype}
+\usepackage{subfigure}
+\usepackage{algorithmic}
+\usepackage{color,xcolor}
+\usepackage[linesnumbered,ruled]{algorithm2e}% http://ctan.org/pkg/algorithm2e
+\DontPrintSemicolon
+\usepackage{color}
+\usepackage{tabularx}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb,bbm}
+\usepackage{stackengine}
+\usepackage{footnote}
+\makesavenoteenv{tabular}
+\makesavenoteenv{table}
+\usepackage{natbib}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{url}% for url's in bib
+% for theorem hyperlink colors
+\usepackage[colorlinks,linkcolor=magenta,citecolor=blue, pagebackref=true,backref=true]{hyperref}
+% \renewcommand*{\backref}[1]{\ifx#1\relax \else Page #1 \fi}
+\renewcommand*{\backrefalt}[4]{%
+    \ifcase #1 \footnotesize{(Not cited.)}%
+    \or        \footnotesize{(Cited on page~#2.)}%
+    \else      \footnotesize{(Cited on pages~#2.)}%
+    \fi}
 
-\title{Candidacy writeup}
-\author{leello.tadesse }
-\date{July 2021}
+% for nice fractions
+\usepackage{nicefrac}
+\usepackage{comment}
+
+% for adjust width
+\usepackage{chngpage}
+
+ \usepackage{tabularx}%
+
+% to label enumerate
+\usepackage{enumitem}
+% Top and bottom rules for tables
+\usepackage{booktabs}
+% for captions
+\usepackage{caption}
+
+\usepackage{bm,bbm}
+% for mathmakebox
+\usepackage{mathtools}
+
+\newcommand{\strongconvex}{\mu}
+%\newcommand{\smooth}{\smooth}
+%\newcommand{\smoothprior}{L_2}
+\newcommand{\subgaussian}{\sigma}
+%\newcommand{\discretizedFn}{\discretized{F}_n}
+%
+\newtheorem{assumption}{Assumption}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-6cm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-4cm}
+\addtolength{\textheight}{-1.1\headheight}
+\addtolength{\textheight}{-\headsep}
+\addtolength{\textheight}{-\footskip}
+\setlength{\oddsidemargin}{0.5cm}
+\setlength{\evensidemargin}{0.5cm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\newtheorem{lemma}{Lemma}
+%\newtheorem{theorem}{Theorem}
+%\newtheorem{proposition}{Proposition}
+%\newtheorem{definition}{Definition}
+%\newtheorem{corollary}{Corollary}%opening
+%\newtheorem{assumption}{Assumption}
+%\newtheorem{conjecture}{Conjecture}
+\newenvironment{assumptionprime}[1]
+  {\renewcommand{\theassumption}{\ref{#1}$'$}%
+   \addtocounter{assumption}{-1}%
+   \begin{assumption}}
+  {\end{assumption}}
+\newcommand{\cheeger}{\mathfrak{h}}
+
+\newcommand{\Wass}{\ensuremath{\mathcal{W}}}
+%
+%\newcommand{\real}{\ensuremath{\mathbb{R}}}
+
+%%% New version of \caption puts things in smaller type, single-spaced 
+%%% and indents them to set them off more from the text.h
+\makeatletter
+\long\def\@makecaption#1#2{
+        \vskip 0.8ex
+        \setbox\@tempboxa\hbox{\small {\bf #1:} #2}
+        \parindent 1.5em  %% How can we use the global value of this???
+        \dimen0=\hsize
+        \advance\dimen0 by -3em
+        \ifdim \wd\@tempboxa >\dimen0
+                \hbox to \hsize{
+                        \parindent 0em
+                        \hfil 
+                        \parbox{\dimen0}{\def\baselinestretch{0.96}\small
+                                {\bf #1.} #2
+                                %%\unhbox\@tempboxa
+                                } 
+                        \hfil}
+        \else \hbox to \hsize{\hfil \box\@tempboxa \hfil}
+        \fi
+        }
+\makeatother
+\newcommand{\tr}{\text{tr}}
+\newcommand{\Pr}{\mathbb{P}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\x}{\mathbf{x}}
+
+\title{\textsc{Langevin Monte-Carlo without log-concavity}}
+\author{Leello Dadi \\ LIONS}
+\date{}
+
 
 \begin{document}
 
 \maketitle
+
+\begin{abstract}
+    Langevin Monte-Carlo is a Markov Chain Monte-Carlo sampling method that adds gaussian noise to gradient information to generate samples. It is a local method. It is therefore surprising that it is capable of handling distributions for which local information does not translate to global information : non-log-concave distributions. We will look at the assumptions required to prove this by discussing vempala and wibisono, we will then see that although . There are distributions of interest that lie within that exact region.
+\end{abstract}
 
 \section{Introduction}
 
