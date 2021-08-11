@@ -118,8 +118,8 @@
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\x}{\mathbf{x}}
 
-\title{\textsc{Langevin Monte-Carlo without log-concavity}}
-\author{Leello Dadi \\ LIONS}
+\title{\textsc{Langevin Monte Carlo without log-concavity}}
+\author{Leello Dadi}
 \date{}
 
 
@@ -128,9 +128,103 @@
 \maketitle
 
 \begin{abstract}
-    Langevin Monte-Carlo is a Markov Chain Monte-Carlo sampling method that adds gaussian noise to gradient information to generate samples. It is a local method. It is therefore surprising that it is capable of handling distributions for which local information does not translate to global information : non-log-concave distributions. We will look at the assumptions required to prove this by discussing vempala and wibisono, we will then see that although . There are distributions of interest that lie within that exact region.
+    Langevin Monte-Carlo (LMC) is a Markov Chain Monte Carlo sampling method that adds gradient information to gaussian noise to generate samples. Since it queries only local information, one might expect it to share the same limitations as other local methods like gradient descent. Thanks to the presence of noise, however, LMC is capable of provably sampling from a large class of distributions for which global information cannot be inferred from local queries. We will begin by discussing the proof of this fact by Vempala and Wibisono. We will then see that although the region of tractability extends beyond convexity, there is a potential exponential blow-up of constants in the convergence bound that guarantees that the hardness of generic non-convexity is not violated.  We will finish by discussing Song and Ermon's paper applying LMC to sample from real distributions and discuss whether or not the real world lies in the tractable region.
 \end{abstract}
 
 \section{Introduction}
 
+In keeping with the tradition of secretive Monte Carlo research initiated by Ulam and Von Neuman, we will consider in this report the problem of sampling from a probability distribution $\pi$ while keeping secret our motivations for doing so. 
+
+The distribution $\pi$ is a probability measure over $\R^d$ that admits a density $p_\pi$ that can be expressed as
+\[
+p_\pi(x) = \frac{\exp{\left(-f(x)\right)}}{Z},
+\]
+where $f: \R^d \mapsto \R$ is a continuously differentiable function, referred to as the \textit{potential}, and $Z \in \R$ is a normalization constant. We assume that we can query $f$, $\nabla f$ at any point $x \in \R^d$, but $Z$ will remain unknown.
+
+We are provided with a function $f$ taking inputs in $\R^d$ and outputting real values. The function is nice enough that the following quantity is finite :
+\[
+\int_{\R^d}\exp{-f(x)}dx < \infty
+\]
+
+\section{Notation and setting}
+
+\section{Isoperimetry and smoothness is enough}
+
+The term isoperimetry from the geometric interpretation of measure concentration.
+
+This paper provides a proof of convergence in KL divergence of LMC under minimal assumptions of isoperimetry and smoothness.
+
+The proof is based on considering the continuous time SDE of which 
+
+\subsection{Conditional Fokker-Planck}
+
+\subsection{The Gronwall argument}
+
+\subsection{How big is this class ?}
+
+Is it only perturbations of strongly convex ?
+
+Implication of  quadratic growth might be restrictive so there are other inequalities that may be considered. 
+
+Link with dissipativity. Is it stronger ? a better assumption.
+
+\subsection{Discussion on metrics}
+
+Renyi, KL, Wassertein.
+Discuss the different metrics and how different hypotheses on the warm start affect things.
+
+Lehec discusses warm starts as well as 
+
+\section{How does a small log-sobolev constant affect the dynamics ?}
+
+\subsection{A proof using Girsanov}
+
+\subsection{Is this the theorem we were looking for ?}
+
+\subsection{Kramers escape problem}
+
+\section{LMC in the real world}
+
+This paper proposes method for sampling from real world distributions by first learning the score using score matching techniques then sampling from the learnt score using Langevin Monte Carlo. The naive approach of score estimation then sampling runs into difficulties and yields samples of poor quality. We discuss the methods. We include in this write-up the improvements the same authors made to their method.
+
+\subsection{Score matching}
+
+With only access to samples from distribution $\pi$, score matching attempts to learn the score. 
+
+A vector field $s_\theta: \R^d \rightarrow \R^d$ is parametrized with a neural network, where $\theta$ denotes the network parameters. This network is then trained to learn the score of the data distribution by minimizing the Fisher divergence 
+\[
+\E \left[ \left\| \nabla \log p(x) - s_\theta(x) \right\|_2^2\right]
+\]
+If we assume that for any $\theta$,
+\[
+\lim_{\|x\|_2 \rightarrow \infty} p(x)s_\theta(x) =0,
+\]
+which holds if $p$ is compactly decays fast enough, then a simple integration by parts leads to the equivalent loss
+\[
+\E \left[ \text{tr}(\nabla s_\theta(x)) + \|s_\theta(x)\|_2^2\right]
+\]
+The trace is an expensive quantity to compute.
+
+There are two ways of computing this quantity that are proposed in the paper
+
+\subsection{Learning the score in practice}
+
+
+The architecture and instance normalization.
+
+\subsection{Failures of naive application}
+
+Manifold hypothesis.
+
+Low density regions can't learn the score.
+
+\subsection{Annealed Langevin Dynamics}
+
+What exactly is happening given what we know about langevin dynamics ? Is it a sequence of warm starts. What is the regularity conferred by convolving with Gaussian noise ?
+
+Include the table of the selected hyperparameters. 
+Figure of success in perception and FID scores.
+
+\section{Research Proposal}
+SGD; adaptively preconditionned methods; dangers of SGD
 \end{document}
