@@ -764,7 +764,7 @@ pdfkeywords={Langevin Monte Carlo, log-sobolev inequality, score estimation, dif
 \IEEEcompsoctitleabstractindextext{%
 \begin{abstract}
 %\boldmath
-Langevin Monte-Carlo is a Markov Chain Monte Carlo sampling method that adds gaussian noise to gradient information to generate samples. It queries only local information, one might expect it to share the same shortcomings of other local methods like gradient descent. And yet, it is capable of handling distributions for which local information does not translate to global information : non-log-concave distributions. We will look at the assumptions required to prove this by discussing vempala and wibisono, we will then see that there is a constant appearing in the convergence guarantee that migh explode . There are distributions of interest that lie within that exact region.
+    Langevin Monte-Carlo (LMC) is a Markov Chain Monte Carlo sampling method that adds gradient information to gaussian noise to generate samples. Since it queries only local information, one might expect it to share the same limitations as other local methods like gradient descent. The presence of noise, however, makes LMC capable of provably sampling from a large class of distributions for which global information cannot be inferred from local queries. We will begin by discussing the proof of this fact by Vempala and Wibisono. We will then see that although the region of tractability extends beyond convexity, there is a potential exponential blow-up of constants in the convergence bound that ensures that the computational hardness of non-convexity is never violated.  We will finish by discussing Song and Ermon's paper applying LMC to sample from real distributions and discuss whether or not the real world lies in the tractable region.
 \end{abstract}
 % IEEEtran.cls defaults to using nonbold math in the Abstract.
 % This preserves the distinction between vectors and scalars. However,
@@ -807,8 +807,110 @@ thesis proposal, candidacy exam write-up, EDIC, EPFL
 \IEEEpeerreviewmaketitle
 
 
-
 \section{Introduction}
+
+In keeping with the tradition of secretive Monte Carlo research initiated by Ulam and Von Neuman, we will consider in this report the problem of sampling from a probability distribution $\pi$ while keeping secret our motivations for doing so. 
+
+The distribution $\pi$ is a probability measure over $\R^d$ that admits a density $p_\pi$ that can be expressed as
+\[
+p_\pi(x) = \frac{\exp{\left(-f(x)\right)}}{Z},
+\]
+where $f: \R^d \mapsto \R$ is a continuously differentiable function, referred to as the \textit{potential}, and $Z \in \R$ is a normalization constant. We assume that we can query $f$, $\nabla f$ at any point $x \in \R^d$, but $Z$ will remain unknown.
+
+Our goal is to generate samples whose distribution is sufficiently \textit{close} to $\pi$ that estimating expectations like $\E[\phi(X)]$ where $\phi$ is a bounded function. 
+Since we have access to the gradients, we can guide our random walk towards high probability regions. This is the main idea of Langevin Monte Carlo. The algorithm consists of generating the Markov Chain given by the following formula
+\begin{equation}
+X_{k+1} = X_k - \eta \nabla f(X_k) + \sqrt{2\eta}Z_{k+1},
+\label{eq:LMC}
+\tag{LMC}
+\end{equation}
+for some $\eta > 0$ and $(Z_k)_k$ is an sequence of independent identically distributed $\mathcal{N}(0, 1)$ gaussians.
+
+Running the iterates \eqref{eq:LMC} was first suggested in the physics litterature. 
+
+We are provided with a function $f$ taking inputs in $\R^d$ and outputting real values. The function is nice enough that the following quantity is finite :
+\[
+\int_{\R^d}\exp{-f(x)}dx < \infty
+\]
+
+\section{Notation and setting}
+
+
+\section{LMC in the real world}
+
+We have seen in the previous section that the price to pay for a small log-Sobolev constant is time exponentially long in the dimension spent around local minimizers. The question now is to figure out where real world distributions lie. Do they live in the untractable realm of exponentially small LSI constants ?
+
+To try to answer this question, we study in this section the work of Song and Ermon \cite{song_generative_2019}. Their paper proposes a method for sampling from real world distributions by first learning the score from available data using a neural network then sampling from the learnt score using Langevin Monte Carlo. A naive application of this idea yields samples of poor quality and the authors show that, for this approach to work, the perturbation of the data by noise is instrumental.
+
+We discuss their method in detail by first explaining how the score is learnt, then we describe the proposed LMC scheme and finish by arguing that the demonstrated success of \cite{song_generative_2019} provides strong support for the view that the real world is tractable.
+
+\subsection{Score matching}
+
+Score matching consists of learning the score of a distribution $\pi$ when only having access to independent samples.
+
+A vector field $s_\theta: \R^d \rightarrow \R^d$ is parametrized with a neural network, where $\theta$ denotes the network parameters included in some set $\Theta$. This network is then trained to learn the score of the data distribution by minimizing the Fisher divergence 
+\begin{equation}
+\min_{\theta \in \Theta} \E_{X \sim \pi} \left[ \left\| \nabla \log p_\pi(X) - s_\theta(X) \right\|_2^2\right].
+\label{eq:fisher}
+\end{equation}
+If the minimum $0$ is attained for some parameter $\theta^\star$, the equality $s_{\theta^\star} = \nabla \log p_\pi(x)$ will hold $\pi$-almost everywhere. The loss \eqref{eq:fisher} is therefore a sensible one. But since it involves the unknown score $\nabla \log p_\pi(x)$, it is unusable in practice.
+
+Hyvareinen \cite{hyvarinen_estimation_2005} noticed that if $p_\pi$ is decays sufficiently fast at infinity, such that for any $\theta \in \Theta$,
+\(
+ \lim_{\|x\|_2 \rightarrow \infty} p(x)s_\theta(x) =0,
+\)
+then, a simple integration by parts will to the equivalent optimization problem
+\begin{equation}
+\min_{\theta \in \Theta} \E_{X \sim \pi} \left[ \text{tr}(J_{s_\theta}(X)) + \|s_\theta(X)\|_2^2\right],
+\label{eq:tractable-score}
+\end{equation}
+where $J_{s_\theta}(x)$ denotes the Jacobian of $s_\theta$ at $x$. Although this is now implementable, the trace of the Jacobian is an expensive quantity to compute. Two methods to alleviate this computational burden are discussed in \cite{song_generative_2019}.
+
+The first is \textit{sliced score matching}, proposed by Song and his collaborators, replaces the trace by an unbiased estimator $v^TJ{s_\theta}(X)v$ where $v$ is an isotropic random vector, in order to leverage the fast implementation of Jacobian-vector products available in automatic differentiation packages. The second method, better suited for the scores involved in this paper, is \textit{Denoising Score Matching (DSM)} \cite{vincent_connection_2011}. Unlike sliced score matching, DSM does not estimate the score of the data distribution $\pi$ but rather the score of data distribution perturbed by Gaussian noise $p * \mathcal{N}(0, \sigma^2I)$. An integration by parts shows that learning scores of perturbed distributions amounts to minimizing the implementable loss
+\[
+\min_{\theta \in \Theta} \E_{X \sim \pi, Z \sim \mathcal{N}(0, \sigma^2I)} \left[ \|s_\theta(X + Z) -  \frac{\|Z\|_2^2}{2\sigma^2}\|_2^2\right].
+\]
+
+Learning the perturbed score is well suited here because, as we will see next, perturbation is necessary for score matching to work well.
+
+\subsection{The need for noise}
+
+Given a set of samples from some real world distribution, attempting to minimize \eqref{eq:tractable-score} is likely to fail.
+
+First, \eqref{eq:tractable-score} assumes that a score exists. This requires that the data distribution admit a density with respect to the Lebesgue measure that is differentiable. There is no reason to believe this is the case for the distribution of natural images. In fact, a commonly held belief is that the support of this natural distribution is some lower dimensional manifold to which the Lebesgue measure assigns no mass. Therefore, it is unrealistic to expect that this distribution admits density a differentiable one.
+
+Moreover, the loss in \eqref{eq:tractable-score} is a weighted $L_2$ loss that enforces score matching in regions of high probability and discounts mismatches in low probability regions. This causes the learnt score to be innacurate in low probability regions. The aim being to apply a random walk algorithm that traverses the space, going from one high probability region to another, low accuracy score matching are likely to induce it in error. 
+
+Gaussian smoothing addresses both 
+
+Convolution with a gaussian adds regularity so the minimal requirement for LMC are met. Moreover, if the data is perturbed with a gaussian with high enough variance, then a few samples will land in them, thus improving the score estimation in those regions.
+
+
+\subsection{Learning the score in practice}
+
+The architecture and instance normalization.
+What optimization algorithm is used. 
+
+
+
+\subsection{Annealed Langevin Dynamics}
+
+Annealed Langevin dynamics is a method inspired by simulated annealing in the sense that a decreasing sequence of 
+What exactly is happening given what we know about langevin dynamics ? Is it a sequence of warm starts. What is the regularity conferred by convolving with Gaussian noise ?
+
+Include the table of the selected hyperparameters. 
+\subsection{Evaluation metrics}
+
+Two metrics are reported in the paper : the Inception score and the FID score. We briefly describe them to 
+ascertain their usefulness.
+
+\paragraph{Inception score} For a given generative model $G$, we write $X \sim G$, for the samples generated by $G$. We define the class distribution $\Prb_Y := \texttt{Inceptionv3(X)}$, where \texttt{Inceptionv3} is a convolutional neural network trained for classification on the same dataset $G$ was trained on. It outputs a distribution over the class labels. The Inception score IS$(G)$ is then defined as 
+\[
+\text{IS}(G) = \exp \left(\E_{X \sim G} [KL(\Prb_{Y|X} || \Prb_Y)] \right).
+\]
+
+\paragraph{FID score} 
+
 
 % Computer Society journal papers do something a tad strange with the very
 % first section heading (almost always called "Introduction"). They place it
@@ -960,379 +1062,9 @@ approaches, and your proposed approach and solution. Forecast results.
 %\end{table}
 
 
-% Note that IEEE does not put floats in the very first column - or typically
-% anywhere on the first page for that matter. Also, in-text middle ("here")
-% positioning is not used. Most IEEE journals use top floats exclusively.
-% However, Computer Society journals sometimes do use bottom floats - bear
-% this in mind when choosing appropriate optional arguments for the
-% figure/table environments.
-% Note that, LaTeX2e, unlike IEEE journals, places footnotes above bottom
-% floats. This can be corrected via the \fnbelowfloat command of the
-% stfloats package.
 
 
 
-\section{Survey of the Selected Papers: The Giants upon whose shoulders I will stand}
-Background --- Describe the three papers in detail, the problem they
-tackle, the solutions and results, and their shortcomings, and how they
-relate to your work.  This part builds the basis for the oral candidacy exam.
-
-\section{Research Proposal: How I Plan to Revolutionize the World}
-Describe your own work and include a  summary and references. Write how you
-propose to advance the state of the art given the background. What
-is new technically? How does it improve over prior work?
-Summarize, suggest an approximate timeline, and list references.
-
-\vspace{1cm}
-This write-up should be 4-8 pages. \\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
-The quick brown fox jumps over the lazy dog.\\
 
 % if have a single appendix:
 %\appendix[Proof of the Zonklar Equations]

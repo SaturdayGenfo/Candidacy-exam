@@ -113,10 +113,10 @@
         }
 \makeatother
 \newcommand{\tr}{\text{tr}}
-\newcommand{\Pr}{\mathbb{P}}
+\newcommand{\Prb}{\mathbb{P}}
 \newcommand{\E}{\mathbb{E}}
 \newcommand{\R}{\mathbb{R}}
-\newcommand{\x}{\mathbf{x}}
+\newcommand{\bfx}{\mathbf{x}}
 
 \title{\textsc{Langevin Monte Carlo without log-concavity}}
 \author{Leello Dadi}
@@ -128,7 +128,7 @@
 \maketitle
 
 \begin{abstract}
-    Langevin Monte-Carlo (LMC) is a Markov Chain Monte Carlo sampling method that adds gradient information to gaussian noise to generate samples. Since it queries only local information, one might expect it to share the same limitations as other local methods like gradient descent. Thanks to the presence of noise, however, LMC is capable of provably sampling from a large class of distributions for which global information cannot be inferred from local queries. We will begin by discussing the proof of this fact by Vempala and Wibisono. We will then see that although the region of tractability extends beyond convexity, there is a potential exponential blow-up of constants in the convergence bound that guarantees that the hardness of generic non-convexity is not violated.  We will finish by discussing Song and Ermon's paper applying LMC to sample from real distributions and discuss whether or not the real world lies in the tractable region.
+    Langevin Monte-Carlo (LMC) is a Markov Chain Monte Carlo sampling method that adds gradient information to gaussian noise to generate samples. Since it queries only local information, one might expect it to share the same limitations as other local methods like gradient descent. The presence of noise, however, makes LMC capable of provably sampling from a large class of distributions for which global information cannot be inferred from local queries. Vempala and Wibisono provide a proof \cite{vempala_rapid_2019} of convergence for LMC for non-log-concave distributions under two mild assumptions. We will then see that although their work shows that the region of tractability for LMC extends beyond log-concavity, there is a potential exponential blow-up of constants in the convergence bound that ensures that the computational hardness of non-convexity is never violated.  We will finish by discussing Song and Ermon's paper applying LMC to sample from real distributions and discuss whether or not the real world lies in the tractable region.
 \end{abstract}
 
 \section{Introduction}
@@ -141,6 +141,17 @@ p_\pi(x) = \frac{\exp{\left(-f(x)\right)}}{Z},
 \]
 where $f: \R^d \mapsto \R$ is a continuously differentiable function, referred to as the \textit{potential}, and $Z \in \R$ is a normalization constant. We assume that we can query $f$, $\nabla f$ at any point $x \in \R^d$, but $Z$ will remain unknown.
 
+Our goal is to generate samples whose distribution is sufficiently \textit{close} to $\pi$ that estimating expectations like $\E_\pi[\phi(X)]$ where $\phi$ is a bounded function can be achieved with good precision. 
+Since we have access to the gradients, we can guide our random walk towards high probability regions. This is the main idea of Langevin Monte Carlo. The algorithm consists of generating the Markov Chain given by the following formula
+\begin{equation}
+X_{k+1} = X_k - \eta \nabla f(X_k) + \sqrt{2\eta}Z_{k+1},
+\label{eq:LMC}
+\tag{LMC}
+\end{equation}
+for some $\eta > 0$ and $(Z_k)_k$ is an sequence of independent identically distributed $\mathcal{N}(0, 1)$ gaussians.
+
+Running the iterates \eqref{eq:LMC} was first suggested in the physics litterature. 
+
 We are provided with a function $f$ taking inputs in $\R^d$ and outputting real values. The function is nice enough that the following quantity is finite :
 \[
 \int_{\R^d}\exp{-f(x)}dx < \infty
@@ -148,9 +159,19 @@ We are provided with a function $f$ taking inputs in $\R^d$ and outputting real 
 
 \section{Notation and setting}
 
+The distributions considered in this report are the laws of random variables taking values in $(\R^d, B(\R^d))$, where $B(\R^d)$ denotes the Borel sigma field. For a probability distribution $\nu$, we write $p_\nu$ for its density with respect to the Lebesgue measure over $\R^d$. The expectation with respect to $\nu$ is denoted $\E_\nu$. The gradient of a function $f: \R^d \rightarrow \R$ is denoted $\nabla f$, if it is multivariate, the Jacobian is denoted $J_f$. The divergence 
+
 \section{Isoperimetry and smoothness is enough}
 
-The term isoperimetry from the geometric interpretation of measure concentration.
+\subsection{The log-Sobolev inequality}
+The term isoperimetry from the geometric interpretation of measure concentration. 
+
+\paragraph{The Herbst argument} Given a zero mean random variable $X$, a concentration inequality is a bound on the tails of the law of $X$. The random variable is said to be sub-gaussian if it verifies the following inequality:
+\[
+\Prb(X > t) \leq C\exp(-\frac{t^2}{c})
+\]
+The \textit{Herbst argument} is a method for doing so.
+
 
 This paper provides a proof of convergence in KL divergence of LMC under minimal assumptions of isoperimetry and smoothness.
 
@@ -164,9 +185,11 @@ The proof is based on considering the continuous time SDE of which
 
 Is it only perturbations of strongly convex ?
 
+Lipschitz mappings.
+
 Implication of  quadratic growth might be restrictive so there are other inequalities that may be considered. 
 
-Link with dissipativity. Is it stronger ? a better assumption.
+Link with dissipativity. Is it stronger ? a better assumption, more used in optimization litterature. However, the other papers don't just use dissipativity to control, they use it to guarantee quadratic growth. And in particular they use it to bound the expected moments of the gradients.
 
 \subsection{Discussion on metrics}
 
@@ -175,9 +198,25 @@ Discuss the different metrics and how different hypotheses on the warm start aff
 
 Lehec discusses warm starts as well as 
 
-\section{How does a small log-sobolev constant affect the dynamics ?}
+\section{Analyzing the trajectory of LMC}
 
-\subsection{A proof using Girsanov}
+
+
+\subsection{Escape time of the diffusion}
+
+The proof of this theorem proceeds as follows. First, the gradient is linearized around some local minimum. The behavior of the diffusion is the sum of two components : the easily controllable process, that we denote N for nice, coming, from the linear term and the bounded term coming from the inexact linearization. 
+
+The goal is to control how the process deviates
+
+The proof is an interesting strategy. First divide the process we want to control in two A and B with B being a process we can upper bound and A.
+
+This way the burden of controlling the first term is entirely within my control because A is a martingale and there is a rich set of theorems controlling suprema of martingales.
+
+Then stick together the result by using a union bound.
+
+\subsection{Dealing with discretization}
+
+Girsanov's theorem cite Oksendal which was used by Dalalyan for providing the first proof of LMC and RRT for the analysis of LMC with access to stochasitc estimates of $\nabla f$.
 
 \subsection{Is this the theorem we were looking for ?}
 
@@ -185,46 +224,115 @@ Lehec discusses warm starts as well as
 
 \section{LMC in the real world}
 
-This paper proposes method for sampling from real world distributions by first learning the score using score matching techniques then sampling from the learnt score using Langevin Monte Carlo. The naive approach of score estimation then sampling runs into difficulties and yields samples of poor quality. We discuss the methods. We include in this write-up the improvements the same authors made to their method.
+We have seen in the previous section that the price to pay for a small log-Sobolev constant is time exponentially long in the dimension spent around local minimizers. The question now is to figure out where real world distributions lie. Do they live in the untractable realm of exponentially small LSI constants ?
+
+To try to answer this question, we study in this section the work of Song and Ermon \cite{song_generative_2019}. Their paper proposes a method for sampling from real world distributions by first learning the score from available data using a neural network then sampling from the learnt score using Langevin Monte Carlo. A naive application of this idea yields samples of poor quality and the authors show that, for this approach to work, the perturbation of the data by noise is instrumental.
+
+We discuss their method in detail by first explaining how the score is learnt, then we describe the proposed LMC scheme and finish by arguing that the demonstrated success of \cite{song_generative_2019} provides strong support for the view that the real world is tractable.
 
 \subsection{Score matching}
 
-With only access to samples from distribution $\pi$, score matching attempts to learn the score. 
+Score matching consists of learning the score of a distribution $\pi$ when only having access to independent samples.
 
-A vector field $s_\theta: \R^d \rightarrow \R^d$ is parametrized with a neural network, where $\theta$ denotes the network parameters. This network is then trained to learn the score of the data distribution by minimizing the Fisher divergence 
-\[
-\E \left[ \left\| \nabla \log p(x) - s_\theta(x) \right\|_2^2\right]
-\]
-If we assume that for any $\theta$,
-\[
-\lim_{\|x\|_2 \rightarrow \infty} p(x)s_\theta(x) =0,
-\]
-which holds if $p$ is compactly decays fast enough, then a simple integration by parts leads to the equivalent loss
-\[
-\E \left[ \text{tr}(\nabla s_\theta(x)) + \|s_\theta(x)\|_2^2\right]
-\]
-The trace is an expensive quantity to compute.
+A vector field $s_\theta: \R^d \rightarrow \R^d$ is parametrized with a neural network, where $\theta$ denotes the network parameters included in some set $\Theta$. This network is then trained to learn the score of the data distribution by minimizing the Fisher divergence 
+\begin{equation}
+\min_{\theta \in \Theta} \E_{X \sim \pi} \left[ \left\| \nabla \log p_\pi(X) - s_\theta(X) \right\|_2^2\right].
+\label{eq:fisher}
+\end{equation}
+If the minimum $0$ is attained for some parameter $\theta^\star$, the equality $s_{\theta^\star} = \nabla \log p_\pi(x)$ will hold $\pi$-almost everywhere. The loss \eqref{eq:fisher} is therefore a sensible one. But since it involves the unknown score $\nabla \log p_\pi(x)$, it is unusable in practice.
 
-There are two ways of computing this quantity that are proposed in the paper
+Hyv\"arinen \cite{hyvarinen_estimation_2005} noticed that if $p_\pi$ is decays sufficiently fast at infinity, such that for any $\theta \in \Theta$,
+\(
+ \lim_{\|x\|_2 \rightarrow \infty} p(x)s_\theta(x) =0,
+\)
+then, a simple integration by parts will to the equivalent optimization problem
+\begin{equation}
+\min_{\theta \in \Theta} \E_{X \sim \pi} \left[ \text{tr}(J_{s_\theta}(X)) + \|s_\theta(X)\|_2^2\right],
+\label{eq:tractable-score}
+\end{equation}
+where $J_{s_\theta}(x)$ denotes the Jacobian of $s_\theta$ at $x$. Although this is now implementable, the trace of the Jacobian is an expensive quantity to compute. Two methods to alleviate this computational burden are discussed in \cite{song_generative_2019}.
+
+The first is \textit{sliced score matching}, proposed by Song and his collaborators, replaces the trace by an unbiased estimator $v^TJ{s_\theta}(X)v$ where $v$ is an isotropic random vector, in order to leverage the fast implementation of Jacobian-vector products available in automatic differentiation packages. The second method, better suited for the scores involved in this paper, is \textit{Denoising Score Matching (DSM)} \cite{vincent_connection_2011}. Unlike sliced score matching, DSM does not estimate the score of the data distribution $\pi$ but rather the score of data distribution perturbed by Gaussian noise $p * \mathcal{N}(0, \sigma^2I)$. An integration by parts shows that learning scores of perturbed distributions amounts to minimizing the implementable loss
+\[
+\min_{\theta \in \Theta} \E_{X \sim \pi, Z \sim \mathcal{N}(0, \sigma^2I)} \left[ \|s_\theta(X + Z) -  \frac{Z}{2\sigma^2}\|_2^2\right].
+\]
+
+Learning the perturbed score is well suited here because, as we will see next, perturbation is necessary for score matching to work well.
+
+\subsection{The need for noise}
+\label{sec:noise}
+
+Given a set of samples from some real world distribution, attempting to minimize \eqref{eq:tractable-score} is likely to fail.
+
+First, \eqref{eq:tractable-score} assumes that a score exists. This requires that the data distribution admit a density with respect to the Lebesgue measure that is differentiable and positive over the entire space. There is no reason to believe this is the case for the distribution of natural images. In fact, a commonly held belief is that the support of this natural distribution is some lower dimensional manifold to which the Lebesgue measure assigns no mass. Therefore, it is unrealistic to expect that this distribution admits density let alone a differentiable one.
+
+Moreover, the loss in \eqref{eq:tractable-score} is a weighted $L_2$ loss that enforces score matching in regions of high probability and discounts mismatches in low probability regions. This causes the learnt score to be innacurate in low probability regions. The aim being to apply a random walk algorithm that traverses the space, going from one high probability region to another, low accuracy score matching are likely to induce it in error. 
+
+Gaussian smoothing can address both these issues. Indeed, convolution by a Gaussian confers all the necessary regularity : first, convolution with a absolutely continuous distribution like the Gaussian guarantees the existence of a density with respect to the Lebesgue measure, second, since the Gaussian is infinitely supported, the density is positive everywhere, and finally the continuous differentiability of the Gaussian density is inherited by the density. Moreover, perturbation with a Gaussian with high enough variance increases the likelihood that samples will land in regions that were originally of low probability. This improves the score matching in those regions.
+
+The addition of noise to the samples is therefore crucial to successfully match the score of the data distribution. It ensures the well-posedness of the problem and improves the matching in low data density regions.
 
 \subsection{Learning the score in practice}
 
+Inspired by simulated annealing, the authors propose to perturb the data with a decreasing sequence of noise scales and learning, jointly, the scores of the decreasingly perturbed distributions. The proposed method consists of first setting a geometrically decreasing sequence of noise scales $\sigma_1 > \dots > \sigma_L$. A \textif{conditional}\footnote{Here, conditional is borrowed from the deep learning litterature, and simply means that the input variable is augmented with an additional input to \textit{condition} the output.} neural network $s_\theta(x, \sigma)$, referred to as a \textit{Noise Conditional Score Network}, is chosen to parametrize the $L$  vector fields that will be matched to the gradient fields associated to each of the perturbed distribution.
 
-The architecture and instance normalization.
+For each of the noise scales, the loss defined in \eqref{eq:tractable-score} is denoted $\ell(\theta, \sigma)$. The network is then trained to jointly minimize all those losses by enforcing the minimization of
+\[
+\frac{1}{L} \sum_{i=1}^{L}\lambda(\sigma_i) \ell(\theta, \sigma_i),
+\]
+where $\lambda(\sigma_i)$ is a weighing coefficient set to $\sigma_i^2$ to ensure that the products \(\lambda(\sigma_i) \ell(\theta, \sigma_i)\) are roughly of the same order for each noise scale $\sigma_i$. 
 
-\subsection{Failures of naive application}
+To learn the score of an image distribution, the authors recommend using an architecture that is well suited for image classification. In the experiments, a U-Net architecture is chosen to parametrize the vector fields, it is trained with Adam.
 
-Manifold hypothesis.
-
-Low density regions can't learn the score.
 
 \subsection{Annealed Langevin Dynamics}
 
-What exactly is happening given what we know about langevin dynamics ? Is it a sequence of warm starts. What is the regularity conferred by convolving with Gaussian noise ?
+With the score network trained, the next step is now to sample. Although our ultimate goal is to sample from the data distribution, we know, from the discussion in \ref{sec:noise}, that the best we can do is to sample from the least perturbed distribution.
+
+Following the simulated annealing inspiration, the authors propose that instead of directly attempting to sample from the least perturbed distribution, better to use the sequence of scores to progressively warm start the each following sampling method. This ensures that the initial particle is always in a region of high probability.
+
+\begin{algorithm}[H]
+	\caption{Annealed Langevin dynamics.}
+	\label{alg:anneal}
+	\begin{algorithmic}[1]
+	    \Require{$\{\sigma_i\}_{i=1}^L, \epsilon, T$.}
+	    \State{Initialize $\tilde{\bfx}_0$}
+	    \For{$i \gets 1$ to $L$}
+	        \State{$\alpha_i \gets \epsilon \cdot \sigma_i^2/\sigma_L^2$} \Comment{$\alpha_i$ is the step size.}
+            \For{$t \gets 1$ to $T$}
+                \State{Draw $\bfz_t \sim \mcal{N}(0, I)$}
+                \State{\resizebox{0.75\textwidth}{!}{$\tilde{\bfx}_{t} \gets \tilde{\bfx}_{t-1} + \dfrac{\alpha_i}{2} \bfs_\bftheta(\tilde{\bfx}_{t-1}, \sigma_i) + \sqrt{\alpha_i}~ \bfz_t$}}
+            \EndFor
+            \State{$\tilde{\bfx}_0 \gets \tilde{\bfx}_T$}
+        \EndFor
+        \item[]
+        \Return{$\tilde{\bfx}_T$}
+	\end{algorithmic}
+\end{algorithm}
+
 
 Include the table of the selected hyperparameters. 
-Figure of success in perception and FID scores.
+\subsection{Evaluation metrics}
 
-\section{Research Proposal}
+Two metrics are reported in the paper : the Inception score and the FID score. We briefly describe them to 
+ascertain their usefulness.
+
+\paragraph{Inception score} For a given generative model $G$, we write $X \sim G$, for the samples generated by $G$. We define the class distribution $\Prb_Y := \texttt{Inceptionv3(X)}$, where \texttt{Inceptionv3} is a convolutional neural network trained for classification on the same dataset $G$ was trained on. It outputs a distribution over the class labels. The Inception score IS$(G)$ is then defined as 
+\[
+\text{IS}(G) = \exp \left(\E_{X \sim G} [KL(\Prb_{Y|X} || \Prb_Y)] \right).
+\]
+
+\paragraph{FID score}  An improvement over the Inception score was proposed by \cite{heusel_gans_2017}. The \textit{Frechet Inception Distance}(FID) also makes use of a trained \texttt{Inceptionv3}. Two statistics, the mean and the variance, of the intermediate features extracted by the network are computed. These two quantities are then used to define a Gaussian random variable. The FID score is taken to be the Wassertein distance between this Gaussian and the one obtained from real data.
+
+
+
+\section{Conclusion and open questions}
 SGD; adaptively preconditionned methods; dangers of SGD
+
+What about saddle points ?
+Tools to analyze recurrences involving gradients and noise which is of high interest in machine learning.
+
+
+\bibliography{references.bib}
+\bibliographystyle{alpha}
 \end{document}
