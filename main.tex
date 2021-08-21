@@ -8,7 +8,7 @@
 \usepackage{microtype}
 \usepackage{subfigure}
 \usepackage{algorithmic}
-\usepackage{color,xcolor}
+\usepackage[dvipsnames]{color,xcolor}
 \usepackage[linesnumbered,ruled]{algorithm2e}% http://ctan.org/pkg/algorithm2e
 \DontPrintSemicolon
 \usepackage{color}
@@ -26,7 +26,7 @@
 \usepackage{subcaption}
 \usepackage{url}% for url's in bib
 % for theorem hyperlink colors
-\usepackage[colorlinks,linkcolor=magenta,citecolor=blue, pagebackref=true,backref=true]{hyperref}
+\usepackage[colorlinks,linkcolor=Gray,citecolor=Gray, pagebackref=true,backref=true]{hyperref}
 % \renewcommand*{\backref}[1]{\ifx#1\relax \else Page #1 \fi}
 \renewcommand*{\backrefalt}[4]{%
     \ifcase #1 \footnotesize{(Not cited.)}%
@@ -60,7 +60,14 @@
 \newcommand{\subgaussian}{\sigma}
 %\newcommand{\discretizedFn}{\discretized{F}_n}
 %
+\usepackage{amsthm}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
 \newtheorem{assumption}{Assumption}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \setlength{\textwidth}{\paperwidth}
 \addtolength{\textwidth}{-6cm}
@@ -117,6 +124,12 @@
 \newcommand{\E}{\mathbb{E}}
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\bfx}{\mathbf{x}}
+\newcommand{\bX}{\mathbf{X}}
+\newcommand{\KL}{\text{KL}}
+
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 
 \title{\textsc{Langevin Monte Carlo without log-concavity}}
 \author{Leello Dadi}
@@ -128,27 +141,29 @@
 \maketitle
 
 \begin{abstract}
-    Langevin Monte-Carlo (LMC) is a Markov Chain Monte Carlo sampling method that adds gradient information to gaussian noise to generate samples. Since it queries only local information, one might expect it to share the same limitations as other local methods like gradient descent. The presence of noise, however, makes LMC capable of provably sampling from a large class of distributions for which global information cannot be inferred from local queries. Vempala and Wibisono provide a proof \cite{vempala_rapid_2019} of convergence for LMC for non-log-concave distributions under two mild assumptions. We will then see that although their work shows that the region of tractability for LMC extends beyond log-concavity, there is a potential exponential blow-up of constants in the convergence bound that ensures that the computational hardness of non-convexity is never violated.  We will finish by discussing Song and Ermon's paper applying LMC to sample from real distributions and discuss whether or not the real world lies in the tractable region.
+    Langevin Monte Carlo (LMC) is a Markov Chain Monte Carlo sampling method that adds gradient information to gaussian noise to generate samples. Since it queries only local information, one might expect it to have the same limitations as other local methods like Gradient Descent. The presence of noise, however, makes LMC capable of provably sampling from a large class of distributions for which global information cannot be inferred from local queries. 
+    
+    Vempala and Wibisono provide a proof of this statement in \cite{vempala_rapid_2019} by making two mild assumptions. We will begin our study there. Then, we will see that, although their work shows that the region of tractability for LMC extends beyond strong log-concavity, there is a potential exponential blow-up of constants in the convergence bound that ensures that the computational hardness of non-convexity is never violated. Tzen et al's trajectory-wise analysis of LMC \cite{tzen_local_2018} will shed some light on the causes of this exponential blow-up of convergence time. With this understanding, we will naturally ask whether or not this blow-up occurs when trying to sample from real world distributions. Song and Ermon's work \cite{song_generative_2019} using LMC to generate natural images will provide elements of an answer.
 \end{abstract}
 
 \section{Introduction}
 
 In keeping with the tradition of secretive Monte Carlo research initiated by Ulam and Von Neuman, we will consider in this report the problem of sampling from a probability distribution $\pi$ while keeping secret our motivations for doing so. 
 
-The distribution $\pi$ is a probability measure over $\R^d$ that admits a density $p_\pi$ that can be expressed as
+The considered distribution $\pi$ is a probability measure over $\R^d$ that admits a density $p_\pi$ that can be expressed as
 \[
 p_\pi(x) = \frac{\exp{\left(-f(x)\right)}}{Z},
 \]
 where $f: \R^d \mapsto \R$ is a continuously differentiable function, referred to as the \textit{potential}, and $Z \in \R$ is a normalization constant. We assume that we can query $f$, $\nabla f$ at any point $x \in \R^d$, but $Z$ will remain unknown.
 
-Our goal is to generate samples whose distribution is sufficiently \textit{close} to $\pi$ that estimating expectations like $\E_\pi[\phi(X)]$ where $\phi$ is a bounded function can be achieved with good precision. 
+Our goal is to generate samples approximately distributed according to $\pi$. [better to do a RWM introduction here, mention that access to gradients helps] 
 Since we have access to the gradients, we can guide our random walk towards high probability regions. This is the main idea of Langevin Monte Carlo. The algorithm consists of generating the Markov Chain given by the following formula
 \begin{equation}
-X_{k+1} = X_k - \eta \nabla f(X_k) + \sqrt{2\eta}Z_{k+1},
+\bX_{k+1} = \bX_k - \eta \nabla f(\bX_k) + \sqrt{2\eta}\mathbf{Z}_{k+1},
 \label{eq:LMC}
 \tag{LMC}
 \end{equation}
-for some $\eta > 0$ and $(Z_k)_k$ is an sequence of independent identically distributed $\mathcal{N}(0, 1)$ gaussians.
+for some $\eta > 0$ and $(\mathbf{Z}_k)_k$ is an sequence of independent identically distributed $\mathcal{N}(0, 1)$ gaussians.
 
 Running the iterates \eqref{eq:LMC} was first suggested in the physics litterature. 
 
@@ -163,64 +178,198 @@ The distributions considered in this report are the laws of random variables tak
 
 \section{Isoperimetry and smoothness is enough}
 
+In this section we review the Vempala and Wibisono's proof of convergence for \eqref{eq:LMC} in KL and Renyi divergence.
+
 \subsection{The log-Sobolev inequality}
-The term isoperimetry from the geometric interpretation of measure concentration. 
+
+The first assumption they make is one they refer to as an \textit{isoperimetric} assumption. They assume that $\pi$ verifies the log-Sobolev inequality. This inequality relates the KL divergence from $\pi$ to the Fisher divergence from $\pi$. It is defined as follows.
+
+\begin{definition}
+  There exists $\alpha >0$ such that for any probability measure $\nu$ over $\R^d$ such that $\nu \ll \pi$, we have
+  \begin{equation}
+  KL(\nu || \pi) \leq \frac{1}{2\alpha} I(\nu || \alpha).
+  \label{eq:LSI}
+  \tag{LSI}
+  \end{equation}
+\end{definition}
+
+The biggest $\alpha$ for which the inequality above holds is called the log-Sobolev constant of $\pi$. This inequality was first introduced by Gross [cite] and we can view it as merely an analytic tool to show sub-gaussian concentration through a line of reasoning called the Herbst argument. 
 
 \paragraph{The Herbst argument} Given a zero mean random variable $X$, a concentration inequality is a bound on the tails of the law of $X$. The random variable is said to be sub-gaussian if it verifies the following inequality:
 \[
 \Prb(X > t) \leq C\exp(-\frac{t^2}{c})
 \]
-The \textit{Herbst argument} is a method for doing so.
+The Chernoff method, which is a simple application of Markov's inequality to $e^{\lambda X}$ for $\lambda >0$ tells us that to establish such a bound, we only need to control the moment generating function $\lambda \mapsto \E[e^{\lambda X}]$. The \textit{Herbst argument} is a simple analytic reasonning showing that the log-Sobolev inequality is enough to upper bound the moment generating function and obtain sub-gaussian tails.
 
+In other words, assuming the \eqref{eq:LSI} is saying that we have an easy way of showing sub-gaussian tails or, correspondingly, quadratic growth of $f$. It is however important to note that \eqref{eq:LSI} is strictly stronger than sub-gaussianity.
 
-This paper provides a proof of convergence in KL divergence of LMC under minimal assumptions of isoperimetry and smoothness.
+The term \textit{isoperimetric} comes from the geometric view of measure concentration which relates sub-gaussian concentration to how much measures concentrate around bodies of volume $\frac{1}{2}$.
 
-The proof is based on considering the continuous time SDE of which 
+The log-Sobolev assumption has been used in prior works, namely \cite{dalalyan_theoretical_2014} and \cite{raginsky_non-convex_2017}. However, in those works the \eqref{eq:LSI} is derived from stronger assumptions like strong-log-concavity or dissipativity. Moreover, those stronger assumptions are re-used elsewhere in their results, hence Vempala and Wibisono's result cannot be deduced from previous results. A non-exhaustive diagram of the commonly used assumptions in proving convergence of \eqref{eq:LMC} is provided in Figure \ref{fig:diagram}.
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{diagram.pdf}
+    \caption{A diagram showing the order between commonly used assumptions.  A proof that strongly-log concave densities are dissipative can be derived from the quadratic lower bound at $0$. Corollary 2.1.(2) of \cite{cattiaux_note_2010} shows that dissipativity and lower bounded hessians imply LSI. The fact that poincare inequalities  hold for log-concave measures is shown in Corollary 1.9 of \cite{bakry_simple_2008}. The proof that LSI implies Poincare can be found in \cite{bakry_markov_2014}(Proposition 5.1.3).}
+    \label{fig:diagram}
+\end{figure}
 
-\subsection{Conditional Fokker-Planck}
+The \eqref{eq:LSI} is a well-behaved inequality in the sense that it is preserved under bounded perturbations of the potential $f$. It is also stable through differentiable Lipschitz transformations. This shows that a broad class of distributions verify the \eqref{eq:LSI}. The fact that \cite{vempala_rapid_2019-1} proves convergence without making any stronger assumptions than LSI is a central contribution of the paper.
 
-\subsection{The Gronwall argument}
+\subsection{A proof through conditional Fokker-Planck}
 
-\subsection{How big is this class ?}
+Vempala and Wibisono work by analyzing how the $KL$ divergence evolves when applying a single step of \eqref{eq:LMC}. The first step is noticing that a single step corresponds to the \textit{exact} solution of the continous-time diffusion
 
-Is it only perturbations of strongly convex ?
+\begin{equation}
+    \begin{cases}
+        d\hat{X}_t ={\color{MidnightBlue} \nabla f(\bX_k)}dt + \sqrt{2}dB_t \\
+        \hat{X}_0 = {\bX_k}
+    \end{cases}
+    \label{eq:interp}
+\end{equation}
 
-Lipschitz mappings.
+Notice that the {\color{MidnightBlue}drift term} is time independent and the exact solution of \eqref{eq:interp} evaluated at time $\eta$ is $\hat{X}_\eta = \bX_{k+1}$. By writing the discrete iterates in this interpolated way, we gain access to the vast toolbox of stochastic differential equations.
 
-Implication of  quadratic growth might be restrictive so there are other inequalities that may be considered. 
+Now, our goal is to know how the $KL$ divergence from $\pi$ evolves when going from $\bX_k$ to $\bX_{k+1}$. Using our interpolated process this means we want to know how the continuous object $t \mapsto KL(p_t || \pi)$ evolves between $t=0$ and $t=\eta$. To do so we compute its time derivative :
 
-Link with dissipativity. Is it stronger ? a better assumption, more used in optimization litterature. However, the other papers don't just use dissipativity to control, they use it to guarantee quadratic growth. And in particular they use it to bound the expected moments of the gradients.
+\begin{equation}
+    \frac{d}{dt}\KL(\rho_t || \pi) = \int_{\mathbb{R}^d} {\color{BrickRed} \frac{\partial \rho_t}{\partial t}}(x)\ln\frac{\rho_t(x)}{\pi(x)}dx.
+    \label{eq:kl-deriv}
+\end{equation}
 
-\subsection{Discussion on metrics}
+From \eqref{eq:kl-deriv}, we see that in order to know the behavior of the $\KL$ divergence, we need to know how the density of $p_t$ of $\hat{X}_t$ evolves, i.e, we need to know ${\color{BrickRed} \frac{\partial \rho_t}{\partial t}}(x)$. 
+
+Luckily for us, since \eqref{eq:interp}, when conditionned on $\bX_k$, is a constant drift diffusion, the time derivative $\frac{\partial}{\partial t}\hat{p}_{t|\bX_k}$ of the conditional density is given to us by a standard formula : the Fokker-Planck equation. Once we have the evolution of the conditionned density, we can integrate with respect to $\bX_k$ to determine the evolution of the unconditional density $\frac{\partial}{\partial t}{\hat{p}}_{t}$. This requires a few interchanges between derivatives and expectations.
+
+\paragraph{On the interchange of derivatives and integrals: } Since we are not integrating over compact domains, the interchange of derivatives and integrals requires justifications. Vempala and Wibisono do not explicitely provide proofs that the interchaging can be done. A closely related paper cares about this interchange and provides Lemmas 13a, 13b and 13c justifying it. A close reading, however, shows that the induction argument of [Cite] is actually also done in \cite{vempala_rapid_2019} where it is shown that the \eqref{eq:LSI} is preserved when applying the gradient step and adding noise. Since \eqref{eq:LSI} implies sub-gaussian tails, the fast decay required to justify the interchange is obtained.
+
+Plugging in \eqref{eq:kl-deriv} the formula for the unconditional density determined through this interchange, we find that
+\begin{equation}
+    \frac{d}{dt}\KL(\rho_t || \pi) \leq  {\color{Fuchsia}-\frac{3}{4}I(\rho_t || \pi)} + {\color{Bittersweet}\E\left[\| \nabla f(\hat{X}_t) - \nabla f(\bX_k) \|_2^2\right]}.
+    \label{eq:bound}
+\end{equation}
+
+The {\color{Fuchsia} first} term, ignoring the multiplicative factor, is what we would have obtained if the {\color{MidnightBlue}drift} term in \eqref{eq:kl-deriv} was not frozen in time. The {\color{Bittersweet} second} term is the price we pay for this frozen drift. In other words, it is the price of discretization.
+
+The authors of \cite{vempala_rapid_2019} show that the control of the right hand side of \eqref{eq:bound} can be achieved using only \eqref{eq:LSI} and smoothness.
+
+\subsection{Getting to Gronwall only using LSI and smoothness}
+
+The {\color{Fuchsia} first} term in equation \eqref{eq:bound} can immediately be upperbounded using the \eqref{eq:LSI} assumption. An important contribution of this paper is a simple proof that the showing that 
+
+\subsection{The Renyi Result}
+
+The renyi results decompose into three parts. 
+A considerably weaker result is provided for convergence of ULA measured in Renyi divergence.
 
 Renyi, KL, Wassertein.
 Discuss the different metrics and how different hypotheses on the warm start affect things.
 
-Lehec discusses warm starts as well as 
+\subsection{Discussion}
 
-\section{Analyzing the trajectory of LMC}
+From theorem (*) it is possible to derive the number of iterations needed to be $\epsilon$-close in KL divergence to the target measure $\pi$. 
+
+\section{Analyzing the trajectories of LMC}
+
+To better understand how exponentially small LSI constants can affect the dynamics, we turn our attention to the work of Tzen, Liang and Raginsky \cite{tzen_local_2018}. 
+
+The goal of their paper is to describe the behavior of the trajectories of LMC. Here, LMC is viewed as a tool to optimize the potential $f$. This introduces a parameter $\beta$, referred to as the \textit{inverse temperature} in our LMC iteration :
+\begin{equation}
+\label{eq:betaLMC}
+\mathbf{X}_{k+1} = X_k - \eta \nabla f(X_k) + \sqrt{\frac{2\eta}{\beta}}Z_{k+1}
+\tag{LMC-$\beta$}
+\end{equation}
+which is a discretization of the diffusion
+\begin{equation}
+\label{eq:betadiff}
+\tag{LD-$\beta$}
+dX_t = -\nabla f(X_t)dt + \sqrt{\frac{2}{\beta}}dB_t.
+\end{equation}
+The diffusion above has a stationary measure $\pi_\beta$ whose density is proportional to $e^{-\beta f}$. When $\beta \rightarrow \infty$, this stationary measure concentrates around the minimizers of $f$ (Section 3.5, \cite{raginsky_non-convex_2017}). Consequently, by choosing high enough values of $\beta$, we can optimize $f$ using \eqref{eq:betaLMC}.
+
+Tzen et al study the behavior of the iterates of this algorithm around local minimizers of $f$ and they find that with an appropriate choice of $\eta$ and $\beta$, the iterates can be made to stay within the neighborhood of some local minimzer for an arbitrarely long time with high probability.
+
+This indicates that the possibly slow mixing of LMC can be caused by the long times spent around local minimizers.
 
 
+\subsection{Setting}
 
-\subsection{Escape time of the diffusion}
+In \cite{tzen_local_2018}, the potential $f: \R^d \rightarrow \R$ on which LMC is applied is an empirical risk approximation of a population risk. Indeed, taking the population risk to be of the form
+\(
+F(x) : = \E_\nu [\ell(x, Z)]
+\), where $Z \sim \nu$ is some unknown probability measure over some set $\mathcal{Z}$, we can attempt to optimize $F$ by considering the empirical risk
+\begin{equation}
+f(x) = \frac{1}{n} \sum_{i=1}^{n}\ell(x, Z_i),
+\label{eq:ERM}
+\end{equation}
+where $Z_1, \dots, Z_n$ are independent, identically distributed samples from $\nu$. The following assumptions are made on the functions $\ell$ which translate to properties of $f$.
+\begin{assumption}
+  For any $z \in \mathcal{Z}$, the function $x \mapsto \ell(x, z)$ is continuously twice differentiable and there exists $B$ such that $\| \nabla \ell (0, z) \| \leq B$ for all $z \in \mathcal{Z}$.
+\end{assumption}
+\begin{assumption}
+  There exist $L > 0$ and $M> 0$ such that for any $z \in \mathcal{Z}$,
+  \[
+  \| \nabla \ell(x, z) - \nabla \ell(y, z)\| \leq L \|x - y\| \quad \text{and} \quad \| \nabla^2 \ell(x, z) - \nabla^2 \ell(y, z)\|_2 \leq M \|x - y\|.
+  \]
+  This implies that $f$ is $L$-Lipschitz gradient and $M$-Lipschitz hessian.
+\end{assumption}
+\begin{assumption}
+  The function $f$ is $(m, b)$-dissipative :
+  \[
+  \exists m>0, \; b\geq 0, \quad \forall x \in \R^d, \quad \langle x, \nabla f(x) \rangle \geq m \|w\|^2 - b.
+  \]
+\end{assumption}
 
-The proof of this theorem proceeds as follows. First, the gradient is linearized around some local minimum. The behavior of the diffusion is the sum of two components : the easily controllable process, that we denote N for nice, coming, from the linear term and the bounded term coming from the inexact linearization. 
+We note in passing that these assumptions imply that $f$ verifies the LSI (see Figure \ref{fig:diagram}), but the problem of convergence to stationarity here is not considered here. Rather, Tzen et al focus on proving the following result on time spent around local minima when using \eqref{eq:betaLMC} to optimize \eqref{eq:ERM}.
 
-The goal is to control how the process deviates
+\subsection{The main result}
 
-The proof is an interesting strategy. First divide the process we want to control in two A and B with B being a process we can upper bound and A.
+We now state the main result of \cite{tzen_local_2018}. First, pick a nondegenerate local minimum $\bar{x}$ of $f$ where $H = \nabla^2f(\bar{x})$ is positive definite and initialize \eqref{eq:betaLMC} within a distance of at most $r > 0$ of $\bar{x}$. 
 
-This way the burden of controlling the first term is entirely within my control because A is a martingale and there is a rich set of theorems controlling suprema of martingales.
+\begin{quote}
+\begin{emph}
+For any $\delta \in [0, 1]$, for any small $\epsilon >0$, we set $T_{rec} = \frac{2}{m} \log(\frac{8r}{\epsilon})$. For any escape time $T_{\text{esc}} > T_{\text{rec}}$ of our choice, there exist an $\eta$ small enough, scaling as $O(\frac{1}{T_{\text{esc}}})$, and a $\beta$ big enough, scaling as $O(\log(T_{\text{esc}}))$, such that, for the iterates of \eqref{eq:betaLMC}, we have
+\[
+\Prb(\text{Escape from $\epsilon$-neighborhood of $w_H$ in } [T_{\text{rec}}, T_{\text{esc}}]) \leq \delta.
+\]
+\end{emph}
+\end{quote}
 
-Then stick together the result by using a union bound.
+This result tells us that we can make the iterates of \eqref{eq:betaLMC} stay, with high probability, within the neighborhood of a local minimum for as long as we desire with an appropriate choice of $\eta$ and $\beta$. In other words, there is a choice of $\eta$ and $\beta$ such that \eqref{eq:betaLMC} is trapped close to a local minimum for a long time.
 
-\subsection{Dealing with discretization}
+\subsection{A summary of the proof}
 
-Girsanov's theorem cite Oksendal which was used by Dalalyan for providing the first proof of LMC and RRT for the analysis of LMC with access to stochasitc estimates of $\nabla f$.
+We can briefly outline the main ideas underlying the proof. The goal is to control the escape of the discrete iterates from a neighborhood of $\bar{x}$. To do so, we will control the probability that the continuous diffusion \eqref{eq:betadiff} escapes, then we will relate this control to the discretization \eqref{eq:betaLMC}.
 
-\subsection{Is this the theorem we were looking for ?}
+\begin{paragraph}{Controlling the escape of diffusion :} The first step is to linearize the gradient around the local minimum $\bar{x}$: we can write $\nabla f(x) = H(x-\bar{x}) - \rho(x - \bar{x})$. This allows us to express the diffusion \eqref{eq:betadiff} as a sum of a well behaved process coming from the linear term and a remainder process coming from the error of the linearization $\rho$. Controlling the escape therefore boils down to controlling the sum of these two processes. At this point, Tzen et al exploit the following seemingly trivial result on the control of a sum.
+\begin{lemma}
+Let $A$ and $B$ be two real random variables, then the following inclusion of events holds 
+\[
+\{A + B \geq c \} \subseteq  \{A \geq c_1\} \cup \{ B \geq c_2\}
+\]
+for \textbf{any} $c_1, c_2$ such that $c_1 + c_2 = c$. 
+\end{lemma}
 
-\subsection{Kramers escape problem}
+The result above tells us that controlling the sum of two random variables can be achieved by controlling the terms individually with the added benefit of having some freedom to choose the thresholds $c_1$ and $c_2$. In particular if we have some knowledge of $B$ such that we can find a choice of $c_2$ that makes $\Prb(B > c_2) = 0$, \textit{we can shift the entire burden of controlling the sum onto A}.
+
+This is precisely what is done in \cite{tzen_local_2018}. The remainder process, because of the Lipschitzness of the Hessian (Assumption 2), can be upperbounded. Consequently, we can find a choice of threshold that puts the burden of controlling the escape entirely on the well behaved process coming from the linear term. By doing so and by exploiting standard results for the control of the well behaved process, \cite{tzen_local_2018} are able to derive an upper bound on the probability of escape of the diffusion. 
+\end{paragraph}
+
+\paragraph{Escape of the discrete process} With the diffusion handled, the goal now is to relate the probability of escape of \eqref{eq:betaLMC} to that \eqref{eq:betadiff}. Previous work, namely the result of Dalalyan \cite{dalalyan_theoretical_2016} as well as \cite{raginsky_non-convex_2017}, has shown that for $\eta$ small enough, the behavior of the discrete process is close to the diffusion \textit{evaluated on a grid}. We would like to simply upper bound the probability of escape of the discrete process with the probability of escape of the diffusion. But, since escape for the discrete process can only be realated to escape of the diffusion on a grid, it is \emph{weaker} than controlling the escape on a continuous interval. Indeed, saying that a process does not escape when evaluated on a grid does not exclude the possibility of escape \emph{in between} the grid points. Consequently, a further control of the process in between the grid points is necessary. Adding further conditions on $\eta$ and $\beta$, \cite{tzen_local_2018} are able to do so to prove their result.
+
+\subsection{Is this a compelling theorem ?}
+
+In reading the theorem, we might take issue with the freedom we are given in setting the escape time $T_{\text{esc}}$. The theorem allows us to \emph{choose} how long the process remains trapped. It is less of a theorem on how \eqref{eq:betaLMC} behaves and more of a result on what we can make \eqref{eq:betaLMC} do.
+
+A stronger claim would be one that has $\beta$ chosen independently of $T_{\text{esc}}$. Indeed, we can first choose $\beta$ such that the stationary measure of \eqref{eq:betadiff} concentrates sufficiently around the minimizers of $f$, and then ask how long the process with take to explore the modes.
+
+Tzen, Liang and Raginsky allude to such a result in Remark 2 of \cite{tzen_local_2018}. The Eyring-Kramers law they mention relates the mean exit time of a particle following the Langevin diffusion from the neighborhood of a local minimum to the \textit{height of the barrier} it has to cross, i.e the difference in function value between the minimum and the saddle point it has to cross to exit. This exit time was first related to the log-Sobolev constant by \cite{menz_poincare_2014-1}. Their result informally states the following. If the stationnary measure admits a log-sobelev constant equal to $\alpha$, then there is a local minimum for which the average of the exit time $\tau$ from the neighborhood of the minimum is greater than $\frac{1}{\alpha}$ :
+\begin{quote}
+\[
+    \frac{1}{\alpha} \leq \E[\tau]
+\]
+\end{quote}
+
+We can clearly from this result how small log-Sobolev constants affect the dynamics. For a given $\beta$, the LSI constant $\alpha_\beta$ of the stationnary distribution $\pi_\beta$ tells us that there is a minimum around which the iterates will be trapped on average for a time longer than $\frac{1}{\alpha_\beta}$. If $\alpha_\beta$ is exponentially small in the dimension, this implies an exponentially long wait time to transition out of the basin of a local minimum.
 
 \section{LMC in the real world}
 
@@ -287,35 +436,32 @@ To learn the score of an image distribution, the authors recommend using an arch
 
 \subsection{Annealed Langevin Dynamics}
 
-With the score network trained, the next step is now to sample. Although our ultimate goal is to sample from the data distribution, we know, from the discussion in \ref{sec:noise}, that the best we can do is to sample from the least perturbed distribution.
+Once the score network trained, the next step is now to sample from the distribution it represents using LMC. Although our ultimate goal is to sample from the data distribution, we know, from the discussion in \ref{sec:noise}, that the best we can do is to sample from the least perturbed distribution.
 
-Following the simulated annealing inspiration, the authors propose that instead of directly attempting to sample from the least perturbed distribution, better to use the sequence of scores to progressively warm start the each following sampling method. This ensures that the initial particle is always in a region of high probability.
+Following the simulated annealing inspiration, the authors propose that instead of directly attempting to sample from the least perturbed distribution, it is better to use the sequence of scores to progressively warm start LMC at each round. The algorithm proceeds as follows : an initial sample is drawn form a uniform distribution over the hypercube, then LMC is run for T steps to sample from $\pi_{\sigma_0}$, the output is then used to as the initial point for sampling from the next noise level. The pseudo-code is provided in \ref{alg:anneal}.
 
-\begin{algorithm}[H]
+\begin{algorithm}
 	\caption{Annealed Langevin dynamics.}
 	\label{alg:anneal}
 	\begin{algorithmic}[1]
-	    \Require{$\{\sigma_i\}_{i=1}^L, \epsilon, T$.}
-	    \State{Initialize $\tilde{\bfx}_0$}
-	    \For{$i \gets 1$ to $L$}
-	        \State{$\alpha_i \gets \epsilon \cdot \sigma_i^2/\sigma_L^2$} \Comment{$\alpha_i$ is the step size.}
-            \For{$t \gets 1$ to $T$}
-                \State{Draw $\bfz_t \sim \mcal{N}(0, I)$}
-                \State{\resizebox{0.75\textwidth}{!}{$\tilde{\bfx}_{t} \gets \tilde{\bfx}_{t-1} + \dfrac{\alpha_i}{2} \bfs_\bftheta(\tilde{\bfx}_{t-1}, \sigma_i) + \sqrt{\alpha_i}~ \bfz_t$}}
-            \EndFor
-            \State{$\tilde{\bfx}_0 \gets \tilde{\bfx}_T$}
-        \EndFor
-        \item[]
-        \Return{$\tilde{\bfx}_T$}
+	    \REQUIRE{$\{\sigma_i\}_{i=1}^L, \eta, T$.}
+	    \STATE{Initialize $\tilde{\bfx}_0$}
+	    \FOR{$i \gets 1$ to $L$}
+	        \STATE{$\eta_i \gets \eta \cdot \sigma_i^2/\sigma_L^2$} \Comment{$\eta_i$ is the step size for noise level $\sigma_i$}
+            \FOR{$t \gets 1$ to $T$}
+                \STATE{Draw $z_t \sim \mathcal{N}(0, I)$}
+                \STATE{{$\tilde{\bfx}_{t} \gets \tilde{\bfx}_{t-1} + \eta_i s_\theta(\tilde{\bfx}_{t-1}, \sigma_i) + \sqrt{2\eta_i}~ z_t$}}
+            \ENDFOR
+            \STATE{$\tilde{\bfx}_0 \gets \tilde{\bfx}_T$}
+        \ENDFOR
+        \STATE{ \Return $\tilde{\bfx}_T$}
 	\end{algorithmic}
 \end{algorithm}
 
-
-Include the table of the selected hyperparameters. 
+What is suprising here are the chosen hyperparameters. The results were obtained with very few iterations of LMC for each noise level. The time T is kept constant for each noise level and the reported images were obtained for $T=100$, a very small value in view of the dimension dependence we expect from our convergence bounds.
 \subsection{Evaluation metrics}
 
-Two metrics are reported in the paper : the Inception score and the FID score. We briefly describe them to 
-ascertain their usefulness.
+The small value of $T$ is only notable if the method is successful. We discuss the two metrics reported in the paper : the Inception score and the FID score. We briefly describe them to understand the properties they are evaluating.
 
 \paragraph{Inception score} For a given generative model $G$, we write $X \sim G$, for the samples generated by $G$. We define the class distribution $\Prb_Y := \texttt{Inceptionv3(X)}$, where \texttt{Inceptionv3} is a convolutional neural network trained for classification on the same dataset $G$ was trained on. It outputs a distribution over the class labels. The Inception score IS$(G)$ is then defined as 
 \[
@@ -324,13 +470,26 @@ ascertain their usefulness.
 
 \paragraph{FID score}  An improvement over the Inception score was proposed by \cite{heusel_gans_2017}. The \textit{Frechet Inception Distance}(FID) also makes use of a trained \texttt{Inceptionv3}. Two statistics, the mean and the variance, of the intermediate features extracted by the network are computed. These two quantities are then used to define a Gaussian random variable. The FID score is taken to be the Wassertein distance between this Gaussian and the one obtained from real data.
 
+In addition to these quantitative metrics, the authors provide uncurated images that they have sampled using their method. The images look compelling, although this remains a subjective judgment. A nearest neighbor analysis of a few samples, which consists of looking for the closest image in $\ell_2$ norm in the training dataset, reveals that the samples are not merely memorized. 
 
+According to these measures of success, it is reasonable to state that the NCNS + Annealed Langevin scheme is succesful in sampling from real image distributions.
+
+\subsection{Discussion}
+
+The least convincing part of the paper is the discussion in Section 3.2.2. There it is argued that since LMC is blind to the mixing coefficients it will struggle with sampling from mixtures. We know from our previous study of LMC that this is not the cause for the difficulty of sampling, it is merely because jumping from one mode to the other takes time when the modes are well separated.
+
+Other than this minor point, the paper does a great job at showing that LMC can be succesful is sampling from real world distributions. Many of the unjustified or hand-wavy arguments in the paper for choosing the constants are reevaluated and given more precision in a follow-up paper. Currently, approaches that share strong similarities with this one are the best at sampling from a wide array of image datasets.
 
 \section{Conclusion and open questions}
+
+Niles Weed result.
 SGD; adaptively preconditionned methods; dangers of SGD
 
-What about saddle points ?
+What about saddle points ? A convergence bound involving weaker assumptions will allow us to prove the polynomial time escape from saddle points of perturbed gradient descent.
+
 Tools to analyze recurrences involving gradients and noise which is of high interest in machine learning.
+
+There are currently not many works studying adaptively preconditionned methods. 
 
 
 \bibliography{references.bib}
