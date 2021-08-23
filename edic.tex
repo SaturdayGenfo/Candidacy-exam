@@ -674,7 +674,128 @@ pdfkeywords={Langevin Monte Carlo, log-sobolev inequality, score estimation, dif
 
 
 % correct bad hyphenation here
-\hyphenation{op-tical net-works semi-conduc-tor}
+
+\usepackage{epsf}
+\usepackage{fancyhdr}
+\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{psfrag}
+\usepackage{microtype}
+\usepackage{subfigure}
+\usepackage{algorithmic}
+\usepackage[dvipsnames]{color,xcolor}
+\usepackage[linesnumbered,ruled]{algorithm2e}% http://ctan.org/pkg/algorithm2e
+\DontPrintSemicolon
+\usepackage{color}
+\usepackage{tabularx}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb,bbm}
+\usepackage{stackengine}
+\usepackage{footnote}
+\makesavenoteenv{tabular}
+\makesavenoteenv{table}
+\usepackage{natbib}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{url}% for url's in bib
+% for theorem hyperlink colors
+\usepackage[colorlinks,linkcolor=OliveGreen,citecolor=OliveGreen, pagebackref=true,backref=true]{hyperref}
+% \renewcommand*{\backref}[1]{\ifx#1\relax \else Page #1 \fi}
+\renewcommand*{\backrefalt}[4]{%
+    \ifcase #1 \footnotesize{(Not cited.)}%
+    \or        \footnotesize{(Cited on page~#2.)}%
+    \else      \footnotesize{(Cited on pages~#2.)}%
+    \fi}
+
+% for nice fractions
+\usepackage{nicefrac}
+\usepackage{comment}
+
+% for adjust width
+
+
+ \usepackage{tabularx}%
+
+% to label enumerate
+\usepackage{enumitem}
+% Top and bottom rules for tables
+\usepackage{booktabs}
+% for captions
+\usepackage{caption}
+
+\usepackage{bm,bbm}
+% for mathmakebox
+\usepackage{mathtools}
+
+\newcommand{\strongconvex}{\mu}
+%\newcommand{\smooth}{\smooth}
+%\newcommand{\smoothprior}{L_2}
+\newcommand{\subgaussian}{\sigma}
+%\newcommand{\discretizedFn}{\discretized{F}_n}
+%
+\usepackage{amsthm}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{assumption}{Assumption}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%
+%\newtheorem{lemma}{Lemma}
+%\newtheorem{theorem}{Theorem}
+%\newtheorem{proposition}{Proposition}
+%\newtheorem{definition}{Definition}
+%\newtheorem{corollary}{Corollary}%opening
+%\newtheorem{assumption}{Assumption}
+%\newtheorem{conjecture}{Conjecture}
+\newenvironment{assumptionprime}[1]
+  {\renewcommand{\theassumption}{\ref{#1}$'$}%
+   \addtocounter{assumption}{-1}%
+   \begin{assumption}}
+  {\end{assumption}}
+\newcommand{\cheeger}{\mathfrak{h}}
+
+\newcommand{\Wass}{\ensuremath{\mathcal{W}}}
+%
+%\newcommand{\real}{\ensuremath{\mathbb{R}}}
+
+%%% New version of \caption puts things in smaller type, single-spaced 
+%%% and indents them to set them off more from the text.h
+\makeatletter
+\long\def\@makecaption#1#2{
+        \vskip 0.8ex
+        \setbox\@tempboxa\hbox{\small {\bf #1:} #2}
+        \parindent 1.5em  %% How can we use the global value of this???
+        \dimen0=\hsize
+        \advance\dimen0 by -3em
+        \ifdim \wd\@tempboxa >\dimen0
+                \hbox to \hsize{
+                        \parindent 0em
+                        \hfil 
+                        \parbox{\dimen0}{\def\baselinestretch{0.96}\small
+                                {\bf #1.} #2
+                                %%\unhbox\@tempboxa
+                                } 
+                        \hfil}
+        \else \hbox to \hsize{\hfil \box\@tempboxa \hfil}
+        \fi
+        }
+\makeatother
+\newcommand{\tr}{\text{tr}}
+\newcommand{\Prb}{\mathbb{P}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\bfx}{\mathbf{x}}
+\newcommand{\bX}{\mathbf{X}}
+\newcommand{\KL}{\text{KL}}
+
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 
 
 \begin{document}
@@ -835,55 +956,145 @@ We are provided with a function $f$ taking inputs in $\R^d$ and outputting real 
 
 \section{Notation and setting}
 
-The distributions considered in this report are the laws of random variables taking values in $(\R^d, B(\R^d))$, where $B(\R^d)$ denotes the Borel sigma field. For a probability distribution $\nu$, we write $p_\nu$ for its density with respect to the Lebesgue measure over $\R^d$. The expectation with respect to $\nu$ is denoted $\E_\nu$. The gradient of a function $f: \R^d \rightarrow \R$ is denoted $\nabla f$, if it is multivariate, the Jacobian is denoted $J_f$. The divergence 
+The distributions considered in this report are measures over $(\R^d, B(\R^d))$, where $B(\R^d)$ denotes the Borel sigma field. For a probability distribution $\nu$, we write $p_\nu$ for its Lebesgue density. The expectation with respect to $\nu$ is denoted $\E_\nu$. The gradient of a function $f: \R^d \rightarrow \R$ is denoted $\nabla f$, if it is multivariate, the Jacobian is denoted $J_f$. A function is said to be $L$-\textit{smooth} if its gradient is $L$-Lipschitz. We will consider Ito stochastic differential equations of the form 
+\[
+dX_t =  b(X_t)dt + \sigma dB_t,
+\]
+where $\sigma > 0$, $(B_t)_{t\in [0, +\infty[}$ is a standard Brownian motion on $\R^d$, and $b: \R^d \mapsto \R^d$ is Lipschitz. For appropriate initializations $X_0$, this equation has a unique solution (Theorem 5.2.1 \cite{oksendal_stochastic_2003}) and for each $t\in [0, +\infty[$, the law of $X_t$ admits a density denoted $p_t$ with respect to the Lebesgue measure, moreover, $t \mapsto p_t$ is continuously differentiable (Thm 4.1 \cite{pavliotis_fokkerplanck_2014}). 
 
-\section{Isoperimetry and smoothness is enough}
+The $\KL$ divergence from $\pi$ of a measure $\nu$ and the relative Fisher information I of $\nu$ with respect to $\pi$ are defined as
+\[
+\KL(\nu || \pi) = \int_{\R^d} p_\nu(x)\log\frac{p_\nu(x)}{p_\pi(x)}dx \quad \text{and} \quad I(\nu || \pi) = \int_{\R^d} p_\nu(x)\left\|\log\frac{p_\nu(x)}{p_\pi(x)}\right\|^2dx.
+\]
+
+\section{Convergence under isoperimetry and smoothness}
+
+We begin our study with the proof that the distribution of iterates $(\bX_k)_k$, for an appropriate fixed step-size $\eta$, will approach the target distribution $\pi$. As Vempala and Wibisono's show, this convergence will hold even without convexity of the potential $f$ of the target.
+
+A convergence analysis for two divergence measures is provided in \cite{vempala_rapid_2019}, the $\KL$ and the Renyi divergence. Our focus will be on the $\KL$ divergence as it the more complete contribution of the paper.
+
+The main result is a bound on the decrease of $\KL$ divergence from $\pi$ at each step of \eqref{eq:LMC}. Two assumptions are needed for this result. The first is smoothness of the target potential. The second is
+
+\begin{theorem}
+Let $\pi$ be a distribution satisfying the \eqref{eq:LSI}
+\end{theorem}
 
 \subsection{The log-Sobolev inequality}
-The term isoperimetry from the geometric interpretation of measure concentration. 
 
-\paragraph{The Herbst argument} Given a zero mean random variable $X$, a concentration inequality is a bound on the tails of the law of $X$. The random variable is said to be sub-gaussian if it verifies the following inequality:
+The first assumption they make is one they refer to as an \textit{isoperimetric} assumption. They assume that $\pi$ verifies the log-Sobolev inequality. This inequality relates the KL divergence from $\pi$ to the Fisher divergence from $\pi$. It is defined as follows.
+
+\begin{definition}
+  There exists $\alpha >0$ such that for any probability measure $\nu$ over $\R^d$ such that $\nu \ll \pi$, we have
+  \begin{equation}
+  KL(\nu || \pi) \leq \frac{1}{2\alpha} I(\nu || \pi).
+  \label{eq:LSI}
+  \tag{LSI}
+  \end{equation}
+\end{definition}
+
+The biggest $\alpha$ for which the inequality above holds is called the log-Sobolev constant of $\pi$. This inequality was first introduced by Gross [cite] and we can view it as merely an analytic tool to show sub-gaussian concentration through a line of reasoning called the Herbst argument. 
+
+\paragraph{The Herbst argument} Given a zero mean, real random variable $X$, a concentration inequality is a bound on the tails of the law of $X$. The random variable is said to be sub-gaussian if it verifies the following inequality:
 \[
-\Prb(X > t) \leq C\exp(-\frac{t^2}{c})
+\Prb(|X| > t) \leq C\exp(-\frac{t^2}{c}),
 \]
-The \textit{Herbst argument} is a method for doing so.
+for some absolute constants $C, c > 0$. The Chernoff method, which is a simple application of Markov's inequality to $e^{\lambda X}$ for $\lambda >0$ tells us that to establish such a bound, we only need to control the moment generating function $\lambda \mapsto \E[e^{\lambda X}]$. The \textit{Herbst argument} is a basic sequence of steps showing that the log-Sobolev inequality is enough to upper bound the moment generating function and obtain sub-gaussian tails.
 
-\begin{figure}[h]
+In other words, assuming the \eqref{eq:LSI} is saying that we have an easy way of showing sub-gaussian tails or, correspondingly, of showing the quadratic growth of $f$. This will be our understanding of \eqref{eq:LSI} : it is a guarantee of sub-gaussian concentration. It is however important to note that \eqref{eq:LSI} is strictly stronger than sub-gaussianity. Here, in \cite{vempala_rapid_2019}, the \eqref{eq:LSI} is referred to with the term \textit{isoperimetric} and this comes from the geometric view of measure concentration which quantifies how much measures concentrate around bodies of volume greater than $\frac{1}{2}$.
+
+The log-Sobolev assumption has been used in prior publications, namely \cite{dalalyan_theoretical_2014},  \cite{raginsky_non-convex_2017} and \cite{ma_sampling_2019}. In those papers, the \eqref{eq:LSI} is derived from stronger assumptions like strong-log-concavity or dissipativity. For the first two, \cite{dalalyan_theoretical_2014} and \cite{raginsky_non-convex_2017}, the stronger assumptions are used again elsewhere in their results, ensuring that Vempala and Wibisono's result cannot be deduced from theirs. The last paper \cite{ma_sampling_2019}, however, does an almost identical analysis albeit with a slightly more complicated proof for essentially the same Lemma (Lemma 12 in \cite{vempala_rapid_2019} and Lemma 5 in \cite{ma_sampling_2019}). A non-exhaustive diagram of the commonly used assumptions in proving convergence of \eqref{eq:LMC} is provided in Figure \ref{fig:diagram}.
+\begin{figure}
     \centering
-    \includegraphics[width=0.5\textwidth]{diagram.pdf}
+    \includegraphics[width=0.3\textwidth]{diagram.pdf}
     \caption{A diagram showing the order between commonly used assumptions.  A proof that strongly-log concave densities are dissipative can be derived from the quadratic lower bound at $0$. Corollary 2.1.(2) of \cite{cattiaux_note_2010} shows that dissipativity and lower bounded hessians imply LSI. The fact that poincare inequalities  hold for log-concave measures is shown in Corollary 1.9 of \cite{bakry_simple_2008}. The proof that LSI implies Poincare can be found in \cite{bakry_markov_2014}(Proposition 5.1.3).}
     \label{fig:diagram}
 \end{figure}
 
-Is it only perturbations of strongly convex ?
+The \eqref{eq:LSI} is a well-behaved inequality in the sense that it is preserved under bounded perturbations of the potential $f$. It is also stable through differentiable Lipschitz transformations. This shows that a broad class of distributions verify the \eqref{eq:LSI}. Proving convergence without making any stronger additional assumption is therfore a valuable result.
 
-Lipschitz mappings.
+\subsection{A proof through conditional Fokker-Planck}
 
-Implication of  quadratic growth might be restrictive so there are other inequalities that may be considered. 
+As mentionned earlier, Vempala and Wibisono prove convergence of \eqref{eq:LMC} by analyzing how the $\KL$ divergence evolves during a single step of \eqref{eq:LMC}. We briefly discuss their proof.
 
-Link with dissipativity. Is it stronger ? a better assumption, more used in optimization litterature. However, the other papers don't just use dissipativity to control, they use it to guarantee quadratic growth. And in particular they use it to bound the expected moments of the gradients.
+The goal is to relate the $\KL$ divergence from $\pi$ at step $k$ to the divergence from $\pi$ at step $k+1$. To do so, the first observation is noticing that a single iteration of \eqref{eq:LMC} corresponds to the \textit{exact} solution of the continous-time diffusion
 
-This paper provides a proof of convergence in KL divergence of LMC under minimal assumptions of isoperimetry and smoothness.
+\begin{equation}
+    \begin{cases}
+        d\hat{X}_t ={\color{MidnightBlue} \nabla f(\bX_k)}dt + \sqrt{2}dB_t \\
+        \hat{X}_0 = {\bX_k}
+    \end{cases}
+    \label{eq:interp}
+\end{equation}
 
-The proof is based on considering the continuous time SDE of which 
+Notice that the {\color{MidnightBlue}drift term} is time independent and the exact solution of \eqref{eq:interp} evaluated at time $\eta$ is $\hat{X}_\eta = \bX_{k+1}$. By writing the discrete iterates in this interpolated way, we gain access to the vast toolbox of stochastic differential equations.
 
-\subsection{Conditional Fokker-Planck}
+Now, our goal is to know how the $KL$ divergence from $\pi$ evolves when going from $\bX_k$ to $\bX_{k+1}$. Using our interpolated process this means we want to know how the continuous object $t \mapsto KL(p_t || \pi)$ evolves between $t=0$ and $t=\eta$. To do so we compute its time derivative :
+
+\begin{equation}
+    \frac{d}{dt}\KL(\rho_t || \pi) = \int_{\mathbb{R}^d} {\color{BrickRed} \frac{\partial \rho_t}{\partial t}}(x)\ln\frac{\rho_t(x)}{\pi(x)}dx.
+    \label{eq:kl-deriv}
+\end{equation}
+
+From \eqref{eq:kl-deriv}, we see that in order to know the behavior of the $\KL$ divergence, we need to know how the density of $p_t$ of $\hat{X}_t$ evolves, i.e, we need to know ${\color{BrickRed} \frac{\partial \rho_t}{\partial t}}(x)$. 
+
+Luckily for us, since, when conditionned on $\bX_k$, \eqref{eq:interp} is a constant drift diffusion, the time derivative $\frac{\partial}{\partial t}\hat{p}_{t|\bX_k}$ of the conditional density is given to us by a standard formula : the Fokker-Planck equation. Once we have the evolution of the conditionned density, we can integrate with respect to $\bX_k$ to determine the evolution of the unconditional density $\frac{\partial}{\partial t}{\hat{p}}_{t}$. This requires a few interchanges between derivatives and expectations.
+
+\paragraph{On the interchange of derivatives and integrals: } Since we are not integrating over compact domains, the interchange of derivatives and integrals requires justifications. A closely related paper cares about this interchange and provides Lemmas 13a, 13b and 13c justifying it while \cite{vempala_rapid_2019} does not explicitly mention concerns. A close reading, however, shows steps like the induction argument of [Cite] are actually also done in \cite{vempala_rapid_2019} where it is shown that the \eqref{eq:LSI} is preserved when applying the gradient step and adding noise. Since \eqref{eq:LSI} implies sub-gaussian tails, the fast decay required to justify the interchange is obtained.
+
+
+\paragraph{} Plugging in \eqref{eq:kl-deriv} the formula for the unconditional density determined through this interchange, we find that
+\begin{equation}
+    \frac{d}{dt}\KL(\rho_t || \pi) \leq  {\color{Fuchsia}-\frac{3}{4}I(\rho_t || \pi)} + {\color{Bittersweet}\E\left[\| \nabla f(\hat{X}_t) - \nabla f(\bX_k) \|_2^2\right]}.
+    \label{eq:bound}
+\end{equation}
+
+The {\color{Fuchsia} first} term, ignoring the multiplicative factor, is what we would have obtained if the {\color{MidnightBlue}drift} term in \eqref{eq:kl-deriv} was not frozen in time. The {\color{Bittersweet} second} term is the price we pay for this frozen drift. In other words, it is the price of discretization.
+
+The authors of \cite{vempala_rapid_2019} show that the control of the right hand side of \eqref{eq:bound} can be achieved using only \eqref{eq:LSI} and smoothness.
 
 \subsection{Getting to Gronwall only using LSI and smoothness}
 
-The first term in equation (*) can immediately be upperbounded using the LSI assumption. A central contribution of this paper is showing that 
+The {\color{Fuchsia} first} term in equation \eqref{eq:bound} can immediately be upperbounded using the \eqref{eq:LSI} assumption. An important contribution of this paper is a simple proof showing that the {\color{Bittersweet} second} term can be uniformely bounded for $t \in [0, \eta]$ (Lemma 12, \cite{vempala_rapid_2019}).
+
+The problem boils down to upperbounding the expected squared norm of the gradients of $f$. Vempala and Wibisono show that, as long as $\nabla f$ is Lipschitz smooth, a \textit{transport inequality}, which is an inequality relating a Wassertein distance to the KL divergence, called Talagrand's $T_2$ inequality, is sufficient to control this expected square norm. Otto and Villani proved that \eqref{eq:LSI} is (strictly) stronger than Talagrand's $T_2$ inequality, consequently, the \eqref{eq:LSI} assumption is sufficient to control the expected squared norms.
+
+With this, the authors are able to derive an inequality of the form
+\[
+\frac{d}{dt}\KL(\rho_t || \pi) \leq -C\KL(\rho_t || \pi) + D,
+\]
+where $C, D \geq 0$ are constants. A straightforward application of Gronwall's lemma yields the result in Theorem [ref].
 
 \subsection{The Renyi Result}
 
-The renyi results decompose into three parts. 
-A considerably weaker result is provided for convergence of ULA measured in Renyi divergence.
+In addition to analyzing the behavior of the $\KL$ divergence along the iterates of \eqref{eq:LMC}, the paper also provides, in a second part, analysis of the evolution of the Renyi divergence.
 
-Renyi, KL, Wassertein.
-Discuss the different metrics and how different hypotheses on the warm start affect things.
+The Renyi divergence is defined as follows. For a given $q > 0$, the Renyi divergence of order $q$ of $\nu$ from $\pi$, denoted $R_q(\nu || \pi)$, is given by
+\[
+R_q(\nu || \pi) = \frac{1}{q-1}\log\E_\pi\left[\left( \frac{p_{\nu}(X)}{p_\pi(X)}\right)^q\right].
+\]
+The Renyi divergence is increasing with respect to $q$, and for $q=1$, we can recover the $\KL$ divergence as a limit. It is therefore a generalisation of $\KL$ for which a generalized version of Pinsker's inequality also holds.
+
+In \cite{vempala_rapid_2019}, it is shown that for a given step size $\eta$, the iterates of \eqref{eq:LMC} converge to the \textit{biased} limit $\pi_\eta$ in Renyi divergence at a fast rate when the biased limit verifies the \eqref{eq:LSI}. A missing result however is how far this biased limit is from the actual target measure $\pi$.
+
+This glaring gap prevents their analysis from being a complete one. They only provide a Gaussian example showing that the assumption that \eqref{eq:LSI} holds for the biased limit and that the distance to the true target is controllable by a term linear in $\eta$. For this reason, their analysis is only a first step in proving convergence in Renyi divergence.
+
+Here is how they manage to show their result. The biased limit $\pi_\eta$ is stationnary for the dynamics of \eqref{eq:LMC} : starting from a variable distributed according to $\pi_\eta$, applying a gradient step and then adding gaussian noise returns us back to a variable distributed according to $\pi_\eta$. Observing this, Vempala and Wibisono show
+\begin{itemize}
+\item Applying a gradient step does not change the Renyi divergence between two distributions.
+\item Adding Gaussian noise, under the \eqref{eq:LSI}, decreases the divergence between distributions by a multiplicative factor.
+\end{itemize}
+
+Putting these two facts together, and exploiting the fact that $\pi_\eta$ is stationnary, \cite{vempala_rapid_2019} show that, at each step of \eqref{eq:LMC}, the Renyi divergence is decreased by a multiplicative factor, thus establishing the fast geometric rate. Without the control of the divergence of this biased limit from the true target, this result remains incomplete.
 
 \subsection{Discussion}
 
-From theorem (*) it is possible to derive the number of iterations needed to be $\epsilon$-close in KL divergence to the target measure $\pi$. 
+Vempala and Wibisono provide simple and straightforward analysis showing convergence of \eqref{eq:LMC} to the target measure. Indeed a simple induction on Theorem [cite], shows that in order to be $\epsilon$-close in KL divergence to the target measure $\pi$, we can pick $\eta = O(\frac{\alpha \epsilon}{dL^2}) $, and run \eqref{eq:LMC} for 
+\[
+O\left(\frac{L^2d}{\alpha^2\epsilon}\log(\KL(\rho_0 || \pi))\right)
+\]
+iterations. Since the initial $\KL$ divergence might be infinite, we need a warm start with a Gaussian centered at a stationnary point of $f$. This convergence time has a polynomial dependence on $d$ only if none of the constants involved are hiding possible dimension dependences. Since the log-Sobolev inequality encapsulates a very broad class of distributions and is in effect a restriction only on the tails of the potential, it is unreasonable to expect that this convergence time will always be polynomial in dimension. Indeed, any hard non-convex optimization problem can be cast as a sampling problem, as we will see in the next section. And an always polynomial in dimension convergence bound would violate the assumptions of hardness.
+
+Consequently, some constants in the bound must be hiding possible dimension dependencies and explode exponentially in the dimension for some targets $\pi$. The log-Sobolev constant is the exploding constant. In fact, it is believed that for most generic cases, this constant is exponentially small in dimension \cite{raginsky_non-convex_2017}. In the next section we will give a concrete meaning to the slow convergence time predicted by the bound when LSI constants are very small.
 
 \section{Analyzing the trajectories of LMC}
 
@@ -938,44 +1149,55 @@ where $Z_1, \dots, Z_n$ are independent, identically distributed samples from $\
 
 We note in passing that these assumptions imply that $f$ verifies the LSI (see Figure \ref{fig:diagram}), but the problem of convergence to stationarity here is not considered here. Rather, Tzen et al focus on proving the following result on time spent around local minima when using \eqref{eq:betaLMC} to optimize \eqref{eq:ERM}.
 
-\subsection{The main Result}
+\subsection{The main result}
 
-First, pick a nondegenerate local minimum $\bar{x}$ of $f$ where $H = \nabla^2f(\bar{x})$ is positive definite and initialize \eqref{eq:betaLMC} within a distance of at most $r > 0$ of $\bar{x}$. 
+We now state the main result of \cite{tzen_local_2018}. First, pick a nondegenerate local minimum $\bar{x}$ of $f$ where $H = \nabla^2f(\bar{x})$ is positive definite and initialize \eqref{eq:betaLMC} within a distance of at most $r > 0$ of $\bar{x}$. 
 
 \begin{quote}
 \begin{emph}
-For any small $\epsilon >0$, we set $T_{rec} = \frac{2}{m} \log(\frac{8r}{\epsilon})$. For any escape time $T_{\text{esc}} > T_{\text{rec}}$ of our choice, there exist an $\eta$ small enough, scaling as $O(\frac{1}{T_{\text{esc}}})$, and a $\beta$ big enough, scaling as $O(\log(T_{\text{esc}}))$, such for the iterates of \eqref{eq:betaLMC} initialized at a distance at most $r$, we have
+For any $\delta \in [0, 1]$, for any small $\epsilon >0$, we set $T_{rec} = \frac{2}{m} \log(\frac{8r}{\epsilon})$. For any escape time $T_{\text{esc}} > T_{\text{rec}}$ of our choice, there exist an $\eta$ small enough, scaling as $O(\frac{1}{T_{\text{esc}}})$, and a $\beta$ big enough, scaling as $O(\log(T_{\text{esc}}))$, such that, for the iterates of \eqref{eq:betaLMC}, we have
 \[
-\Prb(\text{Escape from neighborhood of $w_H$ in } [T_{\text{rec}}, T_{\text{esc}}]) \leq \delta.
+\Prb(\text{Escape from $\epsilon$-neighborhood of $w_H$ in } [T_{\text{rec}}, T_{\text{esc}}]) \leq \delta.
 \]
 \end{emph}
 \end{quote}
 
-This result tells us that we can make the iterates of \eqref{eq:betaLMC} stay within the neighborhood of a local minimum for as long as we desire with an appropriate choice of $\eta$ and $\beta$.
+This result tells us that we can make the iterates of \eqref{eq:betaLMC} stay, with high probability, within the neighborhood of a local minimum for as long as we desire with an appropriate choice of $\eta$ and $\beta$. In other words, there is a choice of $\eta$ and $\beta$ such that \eqref{eq:betaLMC} is trapped close to a local minimum for a long time.
 
 \subsection{A summary of the proof}
 
-We can briefly outline the main ideas underlying the proof.
+We can briefly outline the main ideas underlying the proof. The goal is to control the escape of the discrete iterates from a neighborhood of $\bar{x}$. To do so, we will control the probability that the continuous diffusion \eqref{eq:betadiff} escapes, then we will relate this control to the discretization \eqref{eq:betaLMC}.
 
-The proof of this theorem proceeds as follows. First, the gradient is linearized around some local minimum. The behavior of the diffusion is the sum of two components : the easily controllable process, that we denote N for nice, coming, from the linear term and the bounded term coming from the inexact linearization. 
+\begin{paragraph}{Controlling the escape of diffusion :} The first step is to linearize the gradient around the local minimum $\bar{x}$: we can write $\nabla f(x) = H(x-\bar{x}) - \rho(x - \bar{x})$. This allows us to express the diffusion \eqref{eq:betadiff} as a sum of a well behaved process coming from the linear term and a remainder process coming from the error of the linearization $\rho$. Controlling the escape therefore boils down to controlling the sum of these two processes. At this point, Tzen et al exploit the following seemingly trivial result on the control of a sum.
+\begin{lemma}
+Let $A$ and $B$ be two real random variables, then the following inclusion of events holds 
+\[
+\{A + B \geq c \} \subseteq  \{A \geq c_1\} \cup \{ B \geq c_2\}
+\]
+for \textbf{any} $c_1, c_2$ such that $c_1 + c_2 = c$. 
+\end{lemma}
 
-The goal is to control how the process deviates
+The result above tells us that controlling the sum of two random variables can be achieved by controlling the terms individually with the added benefit of having some freedom to choose the thresholds $c_1$ and $c_2$. In particular if we have some knowledge of $B$ such that we can find a choice of $c_2$ that makes $\Prb(B > c_2) = 0$, \textit{we can shift the entire burden of controlling the sum onto A}.
 
-The proof is an interesting strategy. First divide the process we want to control in two A and B with B being a process we can upper bound and A.
+This is precisely what is done in \cite{tzen_local_2018}. The remainder process, because of the Lipschitzness of the Hessian (Assumption 2), can be upperbounded. Consequently, we can find a choice of threshold that puts the burden of controlling the escape entirely on the well behaved process coming from the linear term. By doing so and by exploiting standard results for the control of the well behaved process, \cite{tzen_local_2018} are able to derive an upper bound on the probability of escape of the diffusion. 
+\end{paragraph}
 
-This way the burden of controlling the first term is entirely within my control because A is a martingale and there is a rich set of theorems controlling suprema of martingales.
+\paragraph{Escape of the discrete process} With the diffusion handled, the goal now is to relate the probability of escape of \eqref{eq:betaLMC} to that \eqref{eq:betadiff}. Previous work, namely the result of Dalalyan \cite{dalalyan_theoretical_2016} as well as \cite{raginsky_non-convex_2017}, has shown that for $\eta$ small enough, the behavior of the discrete process is close to the diffusion \textit{evaluated on a grid}. We would like to simply upper bound the probability of escape of the discrete process with the probability of escape of the diffusion. But, since escape for the discrete process can only be realated to escape of the diffusion on a grid, it is \emph{weaker} than controlling the escape on a continuous interval. Indeed, saying that a process does not escape when evaluated on a grid does not exclude the possibility of escape \emph{in between} the grid points. Consequently, a further control of the process in between the grid points is necessary. Adding further conditions on $\eta$ and $\beta$, \cite{tzen_local_2018} are able to do so to prove their result.
 
-Then stick together the result by using a union bound.
+\subsection{Is this a compelling theorem ?}
 
-\subsection{Dealing with discretization}
+In reading the theorem, we might take issue with the freedom we are given in setting the escape time $T_{\text{esc}}$. The theorem allows us to \emph{choose} how long the process remains trapped. It is less of a theorem on how \eqref{eq:betaLMC} behaves and more of a result on what we can make \eqref{eq:betaLMC} do.
 
-Girsanov's theorem cite Oksendal which was used by Dalalyan for providing the first proof of LMC and RRT for the analysis of LMC with access to stochasitc estimates of $\nabla f$.
+A stronger claim would be one that has $\beta$ chosen independently of $T_{\text{esc}}$. Indeed, we can first choose $\beta$ such that the stationary measure of \eqref{eq:betadiff} concentrates sufficiently around the minimizers of $f$, and then ask how long the process with take to explore the modes.
 
-\subsection{Is this the theorem we were looking for ?}
+Tzen, Liang and Raginsky allude to such a result in Remark 2 of \cite{tzen_local_2018}. The Eyring-Kramers law they mention relates the mean exit time of a particle following the Langevin diffusion from the neighborhood of a local minimum to the \textit{height of the barrier} it has to cross, i.e the difference in function value between the minimum and the saddle point it has to cross to exit. This exit time was first related to the log-Sobolev constant by \cite{menz_poincare_2014-1}. Their result informally states the following. If the stationnary measure admits a log-sobelev constant equal to $\alpha$, then there is a local minimum for which the average of the exit time $\tau$ from the neighborhood of the minimum is greater than $\frac{1}{\alpha}$ :
+\begin{quote}
+\[
+    \frac{1}{\alpha} \leq \E[\tau]
+\]
+\end{quote}
 
-In reading the theorem, we might take issue with the freedom we are given in setting the escape time $T_{\text{esc}}$. The theorem allows us to make  holds if we scale down the step size $\eta$ and scale up the parameter $\beta$ appropriately. In fact, this , the setting of the recurrence time seems to come out simply of analytic convenience, nothing in the proof 
-
-\subsection{Kramers escape problem}
+We can clearly from this result how small log-Sobolev constants affect the dynamics. For a given $\beta$, the LSI constant $\alpha_\beta$ of the stationnary distribution $\pi_\beta$ tells us that there is a minimum around which the iterates will be trapped on average for a time longer than $\frac{1}{\alpha_\beta}$. If $\alpha_\beta$ is exponentially small in the dimension, this implies an exponentially long wait time to transition out of the basin of a local minimum.
 
 \section{LMC in the real world}
 
@@ -1096,83 +1318,6 @@ What about saddle points ? A convergence bound involving weaker assumptions will
 Tools to analyze recurrences involving gradients and noise which is of high interest in machine learning.
 
 There are currently not many works studying adaptively preconditionned methods. 
-
-
-\bibliography{references.bib}
-
-
-% Computer Society journal papers do something a tad strange with the very
-% first section heading (almost always called "Introduction"). They place it
-% ABOVE the main text! IEEEtran.cls currently does not do this for you.
-% However, You can achieve this effect by making LaTeX jump through some
-% hoops via something like:
-%
-%\ifCLASSOPTIONcompsoc
-%  \noindent\raisebox{2\baselineskip}[0pt][0pt]%
-%  {\parbox{\columnwidth}{\section{Introduction}\label{sec:introduction}%
-%  \global\everypar=\everypar}}%
-%  \vspace{-1\baselineskip}\vspace{-\parskip}\par
-%\else
-%  \section{Introduction}\label{sec:introduction}\par
-%\fi
-%
-% Admittedly, this is a hack and may well be fragile, but seems to do the
-% trick for me. Note the need to keep any \label that may be used right
-% after \section in the above as the hack puts \section within a raised box.
-
-
-
-% The very first letter is a 2 line initial drop letter followed
-% by the rest of the first word in caps (small caps for compsoc).
-% 
-% form to use if the first word consists of a single letter:
-% \IEEEPARstart{A}{demo} file is ....
-% 
-% form to use if you need the single drop letter followed by
-% normal text (unknown if ever used by IEEE):
-% \IEEEPARstart{A}{}demo file is ....
-% 
-% Some journals put the first two words in caps:
-% \IEEEPARstart{T}{his demo} file is ....
-% 
-% Here we have the typical use of a "T" for an initial drop letter
-% and "HIS" in caps to complete the first word.
-\IEEEPARstart{T}{his} template is not trying to suggest a specific
-style for the content of your candidacy exam/thesis proposal paper; it
-only concerns the style of the writeup itself.  This template is in LaTeX.
-We encourage you to use it for your write-up.
-
-If you insist on using a different word processing program please
-match the style as much as possible.  Here is the basic format: The
-paper size is A4, the font is 10 point, 
-single-spacing, ``times roman like.''
-Two columns, each 8.75~cm wide, with 1.5~cm left/right margins.
-Sections and sub-sections have bold numbered headings.  Figures have
-captions underneath, with a bold label and number, and also a short
-caption sentence.  Ditto for tables.  The text itself is a mix of standard
-paragraphs, bullets, numbered lists, and equations where appropriate.
-References are at the end, in a numbered format, in a slightly smaller
-font.
-
-The overall length of this write-up should be 4-8 pages. 
-
-\subsection{Purpose of this Write-Up}
-% needed in second column of first page if using \IEEEpubid
-%\IEEEpubidadjcol
-This write-up serves two purposes. First, it forms the basis for
-your candidacy exam. As such you should summarize the three papers selected
-by your advisor and yourself, and analyze as well as discuss them critically.
-Second, the write-up 
-is also your thesis proposal.  Therefore, the last one or two pages should
-be dedicated to your own preliminary work. A road-map of how you plan to
-advance the state of the art in your chosen area should also be given.
-For further details please consult the document ``PhD Candidacy Exam Overview.'' You can find the latest
-version at {\tt http://phd.epfl.ch/page57746-en.html}.
-
-
-\subsection{What to Put into the Introduction}
-Describe briefly the context, the problem, shortcomings in prior
-approaches, and your proposed approach and solution. Forecast results.
 
 
 % An example of a floating figure using the graphicx package.
