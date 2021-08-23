@@ -885,7 +885,9 @@ pdfkeywords={Langevin Monte Carlo, log-sobolev inequality, score estimation, dif
 \IEEEcompsoctitleabstractindextext{%
 \begin{abstract}
 %\boldmath
-    Langevin Monte-Carlo (LMC) is a Markov Chain Monte Carlo sampling method that adds gradient information to gaussian noise to generate samples. Since it queries only local information, one might expect it to share the same limitations as other local methods like gradient descent. The presence of noise, however, makes LMC capable of provably sampling from a large class of distributions for which global information cannot be inferred from local queries. We will begin by discussing the proof of this fact by Vempala and Wibisono. We will then see that although the region of tractability extends beyond convexity, there is a potential exponential blow-up of constants in the convergence bound that ensures that the computational hardness of non-convexity is never violated.  We will finish by discussing Song and Ermon's paper applying LMC to sample from real distributions and discuss whether or not the real world lies in the tractable region.
+   Langevin Monte Carlo (LMC) is a Markov Chain Monte Carlo sampling method that adds gradient information to Gaussian noise to generate samples. Since it queries only local information, we might expect it to have all the limitations of local methods like Gradient Descent. The presence of noise, however, makes LMC capable of provably sampling from a large class of distributions for which global information cannot be inferred from local queries. 
+    
+    This statement was proved by Vempala and Wibisono in \cite{vempala_rapid_2019} under two mild assumptions. We will begin our study there. We will then see that, although their work shows the region of tractability for LMC extends beyond strong log-concavity, there is a potential exponential blow-up of constants in the convergence bound that ensures that the computational hardness of non-convexity is never violated. Tzen et al's trajectory-wise analysis of LMC \cite{tzen_local_2018} will shed some light on the causes of this exponential blow-up of convergence time. With this understanding, we will naturally ask whether or not this blow-up occurs when trying to sample from real world distributions. The success of Song and Ermon's work \cite{song_generative_2019} using LMC to generate natural images will help us argue that the real world may well be within the tractable region.
 \end{abstract}
 % IEEEtran.cls defaults to using nonbold math in the Abstract.
 % This preserves the distinction between vectors and scalars. However,
@@ -896,9 +898,7 @@ pdfkeywords={Langevin Monte Carlo, log-sobolev inequality, score estimation, dif
 % not want either math or citations to appear in the abstract.
 
 % Note that keywords are not normally used for peerreview papers.
-\begin{IEEEkeywords}
-thesis proposal, candidacy exam write-up, EDIC, EPFL
-\end{IEEEkeywords}}
+}
 
 
 % make the title area
@@ -932,27 +932,39 @@ thesis proposal, candidacy exam write-up, EDIC, EPFL
 
 In keeping with the tradition of secretive Monte Carlo research initiated by Ulam and Von Neuman, we will consider in this report the problem of sampling from a probability distribution $\pi$ while keeping secret our motivations for doing so. 
 
-The considered distribution $\pi$ is a probability measure over $\R^d$ that admits a density $p_\pi$ that can be expressed as
+The considered distribution $\pi$, our target measure, is a probability measure over $\R^d$ that admits a density $p_\pi$ that can be expressed as
 \[
 p_\pi(x) = \frac{\exp{\left(-f(x)\right)}}{Z},
 \]
-where $f: \R^d \mapsto \R$ is a continuously differentiable function, referred to as the \textit{potential}, and $Z \in \R$ is a normalization constant. We assume that we can query $f$, $\nabla f$ at any point $x \in \R^d$, but $Z$ will remain unknown.
+where $f: \R^d \mapsto \R$ is a continuously differentiable function, referred to as the \textit{potential}, and $Z \in \R$ is a normalization constant. We assume that we can query $f$ and $\nabla f$ at any point $x \in \R^d$, but $Z$ will remain unknown.
 
-Our goal is to generate samples approximately distributed according to $\pi$. [better to do a RWM introduction here, mention that access to gradients helps] 
-Since we have access to the gradients, we can guide our random walk towards high probability regions. This is the main idea of Langevin Monte Carlo. The algorithm consists of generating the Markov Chain given by the following formula
+Our goal is to generate samples approximately distributed according to $\pi$. One approach for doing so is to initialize a random walk at some point $\bX_0 \in \R^d$ and make Gaussian steps exploring the space hoping to land in the typical regions of $\pi$. Before committing to a step, we can check if the walk is leading us towards a higher probability regions by querying $f$ then decide to accept or reject this step. Eventually our random walk will output samples from $\pi$ at the risk of having to reject many steps. 
+
+Here, however, since we have access to the gradients, we can inform our random walk by using this first-order information: the gradient can guide us towards high probability regions. This is the idea of Langevin Monte Carlo (LMC). The algorithm consists of generating the following Markov Chain 
 \begin{equation}
 \bX_{k+1} = \bX_k - \eta \nabla f(\bX_k) + \sqrt{2\eta}\mathbf{Z}_{k+1},
 \label{eq:LMC}
 \tag{LMC}
 \end{equation}
-for some $\eta > 0$ and $(\mathbf{Z}_k)_k$ is an sequence of independent identically distributed $\mathcal{N}(0, 1)$ gaussians.
+where $\eta > 0$ is referred to as the step-size and $(\mathbf{Z}_k)_k$ is an sequence of independent identically distributed $\mathcal{N}(0, 1)$ variables.
 
-Running the iterates \eqref{eq:LMC} was first suggested in the physics litterature. 
+LMC is a gradient augmented random walk and using it sample was first suggested in the chemical physics literature \cite{rossky_brownian_1978}. The asymptotic convergence of the scheme for a fixed step-size was discussed in \cite{roberts_exponential_1996} and the authors argued for the necessity of an Metropolis accept/reject step to ensure that the iterates would eventually sample from $\pi$.
 
-We are provided with a function $f$ taking inputs in $\R^d$ and outputting real values. The function is nice enough that the following quantity is finite :
-\[
-\int_{\R^d}\exp{-f(x)}dx < \infty
-\]
+Indeed, without such a step, the distributions of the iterates $(\bX_k)_{k\in \mathbb{N}}$ tend to a biased limit $\pi_\eta$, that is in most cases different from $\pi$. Dalalyan, through a non asymptotic analysis, offered a possible way of side stepping this need for a Metropolis filter. He showed that given a precision $\epsilon$, it was possible to pick $\eta$ small enough, then run the \eqref{eq:LMC} chain for long enough to generate samples that were $\epsilon$ close $\pi$.
+
+The non-asymptotic convergence guarantees of \cite{dalalyan_theoretical_2016} were derived in the strongly-log-concave case, i.e when $f$ is strongly convex. In this report our focus will be on guarantees of convergence that do not require strong-convexity or even convexity of $f$. 
+
+This is of particular interest because \eqref{eq:LMC} only sees $f$ through local queries of the gradient and one may believe some form of convexity, or conditions requiring stationary points to be global minima, would be necessary to obtain strong guarantees. The presence of noise seems to dispense with the need for such strong conditions when sampling is the goal.
+
+We will see that it is possible to establish convergence of \eqref{eq:LMC} under two mild assumptions that, in effect, only put restrictions on the tails of $f$. The proof we will study is Vempala and Wibisono's in \cite{vempala_rapid_2019}. They show convergence of the iterates as measured by the KL divergence from $\pi$.
+
+The convergence bound will, at first sight, appear to always be polynomial in dimension. But a closer inspection, informed by the work of Tzen, Liang and Raginsky \cite{tzen_local_2018}, will reveal that the convergence can be extremely slow, and in fact be exponential in dimension. The divide between the tractable realm of polynomial convergence and the untractable is captured by a single constant appearing in the bound : the log-Sobolev constant. 
+
+It seems that this log-Sobolev constant is a good measure of benign non-convexity : a sequence involving the sum of a gradient term and a noise term seems to be able to tackle non-convexity as long as the log-Sobolev constant does not have a poor dependence on dimension.
+
+Naturally, we will ask whether or not the real world exhibits this benign non-convexity. Distributions like images, are at the very least multi-modal and therefore cannot be log-concave let alone strongly log-concave. They could however have log-Sobolev constants that have a good polynomial dependence on dimension. Song and Ermon propose a method for applying \eqref{eq:LMC} to real-world distributions. By studying their work, we will discuss whether or not  their results provide sufficient evidence for the claim that the real-world admits well-behaved log-Sobolev constants.
+
+We will conclude by discussing open questions regarding convergence of \eqref{eq:LMC} and reviewing the possible ways in which the tools we understood here to analyze \eqref{eq:LMC} can help us analyze the closely related iterates of Stochastic Gradient Descent, an algorithm in heavy use today, that also mixes gradients with noise, albeit with a different weighing.
 
 \section{Notation and setting}
 
@@ -964,29 +976,37 @@ where $\sigma > 0$, $(B_t)_{t\in [0, +\infty[}$ is a standard Brownian motion on
 
 The $\KL$ divergence from $\pi$ of a measure $\nu$ and the relative Fisher information I of $\nu$ with respect to $\pi$ are defined as
 \[
-\KL(\nu || \pi) = \int_{\R^d} p_\nu(x)\log\frac{p_\nu(x)}{p_\pi(x)}dx \quad \text{and} \quad I(\nu || \pi) = \int_{\R^d} p_\nu(x)\left\|\log\frac{p_\nu(x)}{p_\pi(x)}\right\|^2dx.
+\KL(\nu || \pi) = \int_{\R^d} p_\nu(x)\log\frac{p_\nu(x)}{p_\pi(x)}dx \quad \text{and} \quad I(\nu || \pi) = \int_{\R^d} p_\nu(x)\left\|\nabla \log\frac{p_\nu(x)}{p_\pi(x)}\right\|^2dx.
 \]
 
 \section{Convergence under isoperimetry and smoothness}
 
-We begin our study with the proof that the distribution of iterates $(\bX_k)_k$, for an appropriate fixed step-size $\eta$, will approach the target distribution $\pi$. As Vempala and Wibisono's show, this convergence will hold even without convexity of the potential $f$ of the target.
+We begin our study with the proof that the distribution of iterates $(\bX_k)_k$, for an appropriate fixed step-size $\eta$, will indeed approach the target distribution $\pi$. 
 
-A convergence analysis for two divergence measures is provided in \cite{vempala_rapid_2019}, the $\KL$ and the Renyi divergence. Our focus will be on the $\KL$ divergence as it the more complete contribution of the paper.
+As Vempala and Wibisono's show, this convergence will hold even without convexity of the potential $f$. A convergence analysis for two divergence measures is provided in their paper\cite{vempala_rapid_2019}, the $\KL$ and the Renyi divergence. Our focus will be on the $\KL$ divergence as it the more complete contribution of the paper.
 
-The main result is a bound on the decrease of $\KL$ divergence from $\pi$ at each step of \eqref{eq:LMC}. Two assumptions are needed for this result. The first is smoothness of the target potential. The second is
+The main result of \cite{vempala_rapid_2019} is a bound on the decrease of $\KL$ divergence at each single step of \eqref{eq:LMC}, when going from $\bX_k$ to $\bX_{k+1}$. The convergence of the sequence is then obtained by induction. Two assumptions are needed for this result. The first is smoothness of the target potential. The second is a functional inequality called the log-Sobolev inequality \eqref{eq:LSI}, which we will examine shortly. Using only these two hold, Vempala and Wibisono prove the following theorem. 
 
+\begin{boxF}
 \begin{theorem}
-Let $\pi$ be a distribution satisfying the \eqref{eq:LSI}
+Let $\pi$ be a distribution satisfying the \eqref{eq:LSI} with constant $\alpha > 0$. If the potential is $L$-smooth, we have for any $\eta < \frac{\alpha}{4L^2}$, the following decrease at each step:
+\[
+\KL(\rho_{k+1} || \pi) \leq e^{-\alpha \eta}\KL(\rho_{k} || \pi) + 6\eta^2 d L^2,
+\]
+where $\rho_k$ denotes the distributions of $\bX_k$.
+\label{thm:step}
 \end{theorem}
+\end{boxF}
+In this section, we will first discuss the \eqref{eq:LSI} assumption to get a better grasp of the scope of the result. We will then discuss the proof of Theorem \ref{thm:step}. After briefly mentionning the Renyi result, we will discuss the implications of the convergence bound.
 
 \subsection{The log-Sobolev inequality}
 
-The first assumption they make is one they refer to as an \textit{isoperimetric} assumption. They assume that $\pi$ verifies the log-Sobolev inequality. This inequality relates the KL divergence from $\pi$ to the Fisher divergence from $\pi$. It is defined as follows.
+The main assumptions the authors of \cite{vempala_rapid_2019} is one they refer to as an \textit{isoperimetric} assumption. They assume that $\pi$ verifies the log-Sobolev inequality. This inequality relates the KL divergence from $\pi$ to the relative Fisher information with respect to $\pi$. It is defined as follows.
 
 \begin{definition}
   There exists $\alpha >0$ such that for any probability measure $\nu$ over $\R^d$ such that $\nu \ll \pi$, we have
   \begin{equation}
-  KL(\nu || \pi) \leq \frac{1}{2\alpha} I(\nu || \pi).
+  \KL(\nu || \pi) \leq \frac{1}{2\alpha} I(\nu || \pi).
   \label{eq:LSI}
   \tag{LSI}
   \end{equation}
@@ -994,13 +1014,15 @@ The first assumption they make is one they refer to as an \textit{isoperimetric}
 
 The biggest $\alpha$ for which the inequality above holds is called the log-Sobolev constant of $\pi$. This inequality was first introduced by Gross [cite] and we can view it as merely an analytic tool to show sub-gaussian concentration through a line of reasoning called the Herbst argument. 
 
+\begin{boxK}
 \paragraph{The Herbst argument} Given a zero mean, real random variable $X$, a concentration inequality is a bound on the tails of the law of $X$. The random variable is said to be sub-gaussian if it verifies the following inequality:
 \[
 \Prb(|X| > t) \leq C\exp(-\frac{t^2}{c}),
 \]
 for some absolute constants $C, c > 0$. The Chernoff method, which is a simple application of Markov's inequality to $e^{\lambda X}$ for $\lambda >0$ tells us that to establish such a bound, we only need to control the moment generating function $\lambda \mapsto \E[e^{\lambda X}]$. The \textit{Herbst argument} is a basic sequence of steps showing that the log-Sobolev inequality is enough to upper bound the moment generating function and obtain sub-gaussian tails.
+\end{boxK} 
 
-In other words, assuming the \eqref{eq:LSI} is saying that we have an easy way of showing sub-gaussian tails or, correspondingly, of showing the quadratic growth of $f$. This will be our understanding of \eqref{eq:LSI} : it is a guarantee of sub-gaussian concentration. It is however important to note that \eqref{eq:LSI} is strictly stronger than sub-gaussianity. Here, in \cite{vempala_rapid_2019}, the \eqref{eq:LSI} is referred to with the term \textit{isoperimetric} and this comes from the geometric view of measure concentration which quantifies how much measures concentrate around bodies of volume greater than $\frac{1}{2}$.
+In other words, assuming the \eqref{eq:LSI} is saying that we have an easy way of showing sub-gaussian tails or, correspondingly, of showing the quadratic growth of $f$. This will be our understanding of \eqref{eq:LSI} : it is a convenient guarantee of sub-gaussian concentration. It is however important to note that \eqref{eq:LSI} is strictly stronger than sub-gaussianity. Here, in \cite{vempala_rapid_2019}, the \eqref{eq:LSI} is referred to with the term \textit{isoperimetric} and this comes from the geometric view of measure concentration which quantifies how much measures concentrate around bodies of volume greater than $\frac{1}{2}$.
 
 The log-Sobolev assumption has been used in prior publications, namely \cite{dalalyan_theoretical_2014},  \cite{raginsky_non-convex_2017} and \cite{ma_sampling_2019}. In those papers, the \eqref{eq:LSI} is derived from stronger assumptions like strong-log-concavity or dissipativity. For the first two, \cite{dalalyan_theoretical_2014} and \cite{raginsky_non-convex_2017}, the stronger assumptions are used again elsewhere in their results, ensuring that Vempala and Wibisono's result cannot be deduced from theirs. The last paper \cite{ma_sampling_2019}, however, does an almost identical analysis albeit with a slightly more complicated proof for essentially the same Lemma (Lemma 12 in \cite{vempala_rapid_2019} and Lemma 5 in \cite{ma_sampling_2019}). A non-exhaustive diagram of the commonly used assumptions in proving convergence of \eqref{eq:LMC} is provided in Figure \ref{fig:diagram}.
 \begin{figure}
@@ -1010,23 +1032,23 @@ The log-Sobolev assumption has been used in prior publications, namely \cite{dal
     \label{fig:diagram}
 \end{figure}
 
-The \eqref{eq:LSI} is a well-behaved inequality in the sense that it is preserved under bounded perturbations of the potential $f$. It is also stable through differentiable Lipschitz transformations. This shows that a broad class of distributions verify the \eqref{eq:LSI}. Proving convergence without making any stronger additional assumption is therfore a valuable result.
+The \eqref{eq:LSI} is a well-behaved inequality in the sense that it is preserved under bounded perturbations of the potential $f$. It is also stable through differentiable Lipschitz transformations. This shows that a broad class of distributions verify the \eqref{eq:LSI} and from Figure \ref{fig:diagram} we can see that it is a relatively weak assumptions. Proving convergence without making any stronger additional assumption is therefore a valuable result.
 
 \subsection{A proof through conditional Fokker-Planck}
 
 As mentionned earlier, Vempala and Wibisono prove convergence of \eqref{eq:LMC} by analyzing how the $\KL$ divergence evolves during a single step of \eqref{eq:LMC}. We briefly discuss their proof.
 
-The goal is to relate the $\KL$ divergence from $\pi$ at step $k$ to the divergence from $\pi$ at step $k+1$. To do so, the first observation is noticing that a single iteration of \eqref{eq:LMC} corresponds to the \textit{exact} solution of the continous-time diffusion
+To establish Theorem \ref{thm:step}, the first step is to observe that a single iteration of \eqref{eq:LMC} corresponds to the \textit{exact} solution of the continous-time diffusion
 
 \begin{equation}
     \begin{cases}
-        d\hat{X}_t ={\color{MidnightBlue} \nabla f(\bX_k)}dt + \sqrt{2}dB_t \\
-        \hat{X}_0 = {\bX_k}
-    \end{cases}
+        d{X}_t ={\color{MidnightBlue} \nabla f(\bX_k)}dt + \sqrt{2}dB_t \\
+        {X}_0 = {\bX_k}
+    \end{cases}.
     \label{eq:interp}
 \end{equation}
 
-Notice that the {\color{MidnightBlue}drift term} is time independent and the exact solution of \eqref{eq:interp} evaluated at time $\eta$ is $\hat{X}_\eta = \bX_{k+1}$. By writing the discrete iterates in this interpolated way, we gain access to the vast toolbox of stochastic differential equations.
+Notice that the {\color{MidnightBlue}drift term} is independent of ${X}_t$ and the exact solution of \eqref{eq:interp} evaluated at time $\eta$ is ${X}_\eta = \bX_{k+1}$. By writing the discrete iterates in this interpolated way, we gain access to the vast toolbox of stochastic differential equations.
 
 Now, our goal is to know how the $KL$ divergence from $\pi$ evolves when going from $\bX_k$ to $\bX_{k+1}$. Using our interpolated process this means we want to know how the continuous object $t \mapsto KL(p_t || \pi)$ evolves between $t=0$ and $t=\eta$. To do so we compute its time derivative :
 
@@ -1039,8 +1061,9 @@ From \eqref{eq:kl-deriv}, we see that in order to know the behavior of the $\KL$
 
 Luckily for us, since, when conditionned on $\bX_k$, \eqref{eq:interp} is a constant drift diffusion, the time derivative $\frac{\partial}{\partial t}\hat{p}_{t|\bX_k}$ of the conditional density is given to us by a standard formula : the Fokker-Planck equation. Once we have the evolution of the conditionned density, we can integrate with respect to $\bX_k$ to determine the evolution of the unconditional density $\frac{\partial}{\partial t}{\hat{p}}_{t}$. This requires a few interchanges between derivatives and expectations.
 
-\paragraph{On the interchange of derivatives and integrals: } Since we are not integrating over compact domains, the interchange of derivatives and integrals requires justifications. A closely related paper cares about this interchange and provides Lemmas 13a, 13b and 13c justifying it while \cite{vempala_rapid_2019} does not explicitly mention concerns. A close reading, however, shows steps like the induction argument of [Cite] are actually also done in \cite{vempala_rapid_2019} where it is shown that the \eqref{eq:LSI} is preserved when applying the gradient step and adding noise. Since \eqref{eq:LSI} implies sub-gaussian tails, the fast decay required to justify the interchange is obtained.
-
+\begin{boxK}
+\paragraph*{On the interchange of derivatives and integrals: } Since we are not integrating over compact domains, the interchange of derivatives and integrals requires justifications. A closely related paper \cite{mou_improved_2019} cares about this interchange and provides lemmas justifying it while \cite{vempala_rapid_2019} does not mention any concerns. A careful read, however, shows that steps like the induction argument of \cite{mou_improved_2019} are actually also done in \cite{vempala_rapid_2019}(Lemma 16, 17) where it is shown that the \eqref{eq:LSI} is preserved when applying the gradient step and adding noise. Since \eqref{eq:LSI} implies sub-gaussian tails, the fast decay required to justify the interchange is obtained as long as the initial distribution verifies the \eqref{eq:LSI} (Theorem 4.1 \cite{pavliotis_fokkerplanck_2014}).
+\end{boxK}
 
 \paragraph{} Plugging in \eqref{eq:kl-deriv} the formula for the unconditional density determined through this interchange, we find that
 \begin{equation}
@@ -1054,15 +1077,17 @@ The authors of \cite{vempala_rapid_2019} show that the control of the right hand
 
 \subsection{Getting to Gronwall only using LSI and smoothness}
 
-The {\color{Fuchsia} first} term in equation \eqref{eq:bound} can immediately be upperbounded using the \eqref{eq:LSI} assumption. An important contribution of this paper is a simple proof showing that the {\color{Bittersweet} second} term can be uniformely bounded for $t \in [0, \eta]$ (Lemma 12, \cite{vempala_rapid_2019}).
+It is clear that the {\color{Fuchsia} first} term in equation \eqref{eq:bound} can immediately be upperbounded using the \eqref{eq:LSI} assumption. An important contribution of this paper is a simple proof showing that the {\color{Bittersweet} second} term can be uniformely bounded for $t \in [0, \eta]$ (Lemma 12, \cite{vempala_rapid_2019}).
 
-The problem boils down to upperbounding the expected squared norm of the gradients of $f$. Vempala and Wibisono show that, as long as $\nabla f$ is Lipschitz smooth, a \textit{transport inequality}, which is an inequality relating a Wassertein distance to the KL divergence, called Talagrand's $T_2$ inequality, is sufficient to control this expected square norm. Otto and Villani proved that \eqref{eq:LSI} is (strictly) stronger than Talagrand's $T_2$ inequality, consequently, the \eqref{eq:LSI} assumption is sufficient to control the expected squared norms.
+The problem boils down to upperbounding the expected squared norm of the gradients of $f$. Vempala and Wibisono show that, as long as $\nabla f$ is Lipschitz smooth, a \textit{transport inequality}, which is an inequality relating a Wassertein distance to the KL divergence, called Talagrand's $T_2$ inequality, is sufficient to control this expected square norm. 
 
-With this, the authors are able to derive an inequality of the form
+Otto and Villani proved that \eqref{eq:LSI} is (strictly) stronger than Talagrand's $T_2$ inequality, consequently, the \eqref{eq:LSI} assumption is sufficient to control the expected squared norms.
+
+With this, the authors are able to derive an inequality of the form (roughly)
 \[
 \frac{d}{dt}\KL(\rho_t || \pi) \leq -C\KL(\rho_t || \pi) + D,
 \]
-where $C, D \geq 0$ are constants. A straightforward application of Gronwall's lemma yields the result in Theorem [ref].
+where $C, D \geq 0$ are constants. A straightforward application of Gronwall's lemma yields the result in Theorem \ref{thm:step}.
 
 \subsection{The Renyi Result}
 
@@ -1088,11 +1113,11 @@ Putting these two facts together, and exploiting the fact that $\pi_\eta$ is sta
 
 \subsection{Discussion}
 
-Vempala and Wibisono provide simple and straightforward analysis showing convergence of \eqref{eq:LMC} to the target measure. Indeed a simple induction on Theorem [cite], shows that in order to be $\epsilon$-close in KL divergence to the target measure $\pi$, we can pick $\eta = O(\frac{\alpha \epsilon}{dL^2}) $, and run \eqref{eq:LMC} for 
+Vempala and Wibisono provide simple and straightforward analysis showing convergence of \eqref{eq:LMC} to the target measure. Indeed a simple induction on Theorem \ref{thm:step}, shows that in order to be $\epsilon$-close in KL divergence to the target measure $\pi$, we can pick $\eta = O(\frac{\alpha \epsilon}{dL^2})$, initialize from an appropriate distribution and run \eqref{eq:LMC} for 
 \[
-O\left(\frac{L^2d}{\alpha^2\epsilon}\log(\KL(\rho_0 || \pi))\right)
+O\left(\frac{L^2d}{\alpha^2\epsilon}\right)
 \]
-iterations. Since the initial $\KL$ divergence might be infinite, we need a warm start with a Gaussian centered at a stationnary point of $f$. This convergence time has a polynomial dependence on $d$ only if none of the constants involved are hiding possible dimension dependences. Since the log-Sobolev inequality encapsulates a very broad class of distributions and is in effect a restriction only on the tails of the potential, it is unreasonable to expect that this convergence time will always be polynomial in dimension. Indeed, any hard non-convex optimization problem can be cast as a sampling problem, as we will see in the next section. And an always polynomial in dimension convergence bound would violate the assumptions of hardness.
+iterations. This convergence time has a polynomial dependence on $d$ only if none of the constants involved are hiding possible dimension dependencies. Since the log-Sobolev inequality encapsulates a very broad class of distributions and is in effect a restriction only on the tails of the potential, it is unreasonable to expect that this convergence time will always be polynomial in dimension. Indeed, any hard non-convex optimization problem can be cast as a sampling problem, as we will see in the next section. And a convergence bound that is always polynomial in dimension  would risk violating the assumptions of computational hardness.
 
 Consequently, some constants in the bound must be hiding possible dimension dependencies and explode exponentially in the dimension for some targets $\pi$. The log-Sobolev constant is the exploding constant. In fact, it is believed that for most generic cases, this constant is exponentially small in dimension \cite{raginsky_non-convex_2017}. In the next section we will give a concrete meaning to the slow convergence time predicted by the bound when LSI constants are very small.
 
@@ -1190,20 +1215,17 @@ In reading the theorem, we might take issue with the freedom we are given in set
 
 A stronger claim would be one that has $\beta$ chosen independently of $T_{\text{esc}}$. Indeed, we can first choose $\beta$ such that the stationary measure of \eqref{eq:betadiff} concentrates sufficiently around the minimizers of $f$, and then ask how long the process with take to explore the modes.
 
-Tzen, Liang and Raginsky allude to such a result in Remark 2 of \cite{tzen_local_2018}. The Eyring-Kramers law they mention relates the mean exit time of a particle following the Langevin diffusion from the neighborhood of a local minimum to the \textit{height of the barrier} it has to cross, i.e the difference in function value between the minimum and the saddle point it has to cross to exit. This exit time was first related to the log-Sobolev constant by \cite{menz_poincare_2014-1}. Their result informally states the following. If the stationnary measure admits a log-sobelev constant equal to $\alpha$, then there is a local minimum for which the average of the exit time $\tau$ from the neighborhood of the minimum is greater than $\frac{1}{\alpha}$ :
-\begin{quote}
+Tzen, Liang and Raginsky allude to such a result in Remark 2 of \cite{tzen_local_2018}. The Eyring-Kramers law they mention relates the mean exit time of a particle following the Langevin diffusion from the neighborhood of a local minimum to the \textit{height of the barrier} it has to cross, i.e the difference in function value between the minimum and the saddle point it has to cross to exit. This exit time was first related to the log-Sobolev constant by \cite{menz_poincare_2014-1}. Their result informally states the following. If the stationnary measure admits a log-sobelev constant equal to $\alpha$, then there is a local minimum for which the average of the exit time $\tau$ from the neighborhood of the minimum verifies :
 \[
-    \frac{1}{\alpha} \leq \E[\tau]
+    \frac{1}{\alpha} \lesssim \E[\tau]
 \]
-\end{quote}
-
-We can clearly from this result how small log-Sobolev constants affect the dynamics. For a given $\beta$, the LSI constant $\alpha_\beta$ of the stationnary distribution $\pi_\beta$ tells us that there is a minimum around which the iterates will be trapped on average for a time longer than $\frac{1}{\alpha_\beta}$. If $\alpha_\beta$ is exponentially small in the dimension, this implies an exponentially long wait time to transition out of the basin of a local minimum.
+We can clearly from this result how small log-Sobolev constants affect the dynamics. For a given $\beta$, the LSI constant $\alpha_\beta$ of the stationnary distribution $\pi_\beta$ tells us that there is a minimum around which the iterates will be trapped on average for a time longer than $\frac{1}{\alpha_\beta}$. If $\alpha_\beta$ is exponentially small in the dimension, this implies an exponentially long wait time to transition out of the basin of that local minimum.
 
 \section{LMC in the real world}
 
 We have seen in the previous section that the price to pay for a small log-Sobolev constant is time exponentially long in the dimension spent around local minimizers. The question now is to figure out where real world distributions lie. Do they live in the untractable realm of exponentially small LSI constants ?
 
-To try to answer this question, we study in this section the work of Song and Ermon \cite{song_generative_2019}. Their paper proposes a method for sampling from real world distributions by first learning the score from available data using a neural network then sampling from the learnt score using Langevin Monte Carlo. A naive application of this idea yields samples of poor quality and the authors show that, for this approach to work, the perturbation of the data by noise is instrumental.
+To try to answer this question, we study in this section the work of Song and Ermon \cite{song_generative_2019}. Their paper proposes the following method for sampling from real world distributions:  first learn the score from available data using a neural network then sample from the learnt score using Langevin Monte Carlo. A naive application of this idea yields samples of poor quality and the authors show that, for this approach to work, the perturbation of the data by noise is instrumental.
 
 We discuss their method in detail by first explaining how the score is learnt, then we describe the proposed LMC scheme and finish by arguing that the demonstrated success of \cite{song_generative_2019} provides strong support for the view that the real world is tractable.
 
@@ -1211,9 +1233,9 @@ We discuss their method in detail by first explaining how the score is learnt, t
 
 Score matching consists of learning the score of a distribution $\pi$ when only having access to independent samples.
 
-A vector field $s_\theta: \R^d \rightarrow \R^d$ is parametrized with a neural network, where $\theta$ denotes the network parameters included in some set $\Theta$. This network is then trained to learn the score of the data distribution by minimizing the Fisher divergence 
+A vector field $s_\theta: \R^d \rightarrow \R^d$ is parametrized with a neural network, where $\theta$ denotes the network parameters included in some set $\Theta$. This network is then trained to learn the score of the data distribution by minimizing the relative Fisher information 
 \begin{equation}
-\min_{\theta \in \Theta} \E_{X \sim \pi} \left[ \left\| \nabla \log p_\pi(X) - s_\theta(X) \right\|_2^2\right].
+\min_{\theta \in \Theta} \E_{X \sim \pi} \left[ \left\| s_\theta(X) - \nabla \log p_\pi(X) \right\|_2^2\right].
 \label{eq:fisher}
 \end{equation}
 If the minimum $0$ is attained for some parameter $\theta^\star$, the equality $s_{\theta^\star} = \nabla \log p_\pi(x)$ will hold $\pi$-almost everywhere. The loss \eqref{eq:fisher} is therefore a sensible one. But since it involves the unknown score $\nabla \log p_\pi(x)$, it is unusable in practice.
@@ -1222,14 +1244,14 @@ Hyv\"arinen \cite{hyvarinen_estimation_2005} noticed that if $p_\pi$ is decays s
 \(
  \lim_{\|x\|_2 \rightarrow \infty} p(x)s_\theta(x) =0,
 \)
-then, a simple integration by parts will to the equivalent optimization problem
+then, a simple integration by parts will yield the equivalent optimization problem
 \begin{equation}
 \min_{\theta \in \Theta} \E_{X \sim \pi} \left[ \text{tr}(J_{s_\theta}(X)) + \|s_\theta(X)\|_2^2\right],
 \label{eq:tractable-score}
 \end{equation}
 where $J_{s_\theta}(x)$ denotes the Jacobian of $s_\theta$ at $x$. Although this is now implementable, the trace of the Jacobian is an expensive quantity to compute. Two methods to alleviate this computational burden are discussed in \cite{song_generative_2019}.
 
-The first is \textit{sliced score matching}, proposed by Song and his collaborators, replaces the trace by an unbiased estimator $v^TJ{s_\theta}(X)v$ where $v$ is an isotropic random vector, in order to leverage the fast implementation of Jacobian-vector products available in automatic differentiation packages. The second method, better suited for the scores involved in this paper, is \textit{Denoising Score Matching (DSM)} \cite{vincent_connection_2011}. Unlike sliced score matching, DSM does not estimate the score of the data distribution $\pi$ but rather the score of data distribution perturbed by Gaussian noise $p * \mathcal{N}(0, \sigma^2I)$. An integration by parts shows that learning scores of perturbed distributions amounts to minimizing the implementable loss
+The first is \textit{sliced score matching}, proposed by Song and his collaborators, replaces the trace by an unbiased estimator $v^TJ{s_\theta}(X)v$ where $v$ is an isotropic random vector, in order to leverage the fast implementation of Jacobian-vector products available in automatic differentiation packages. The second method, better suited for the scores involved in this paper, is \textit{Denoising Score Matching (DSM)} \cite{vincent_connection_2011}. Unlike sliced score matching, DSM does not estimate the score of the data distribution $\pi$ but rather the score of data distribution perturbed by Gaussian noise $\pi * \mathcal{N}(0, \sigma^2I)$. An integration by parts shows that learning scores of perturbed distributions amounts to minimizing the implementable loss
 \[
 \min_{\theta \in \Theta} \E_{X \sim \pi, Z \sim \mathcal{N}(0, \sigma^2I)} \left[ \|s_\theta(X + Z) -  \frac{Z}{2\sigma^2}\|_2^2\right].
 \]
@@ -1243,7 +1265,7 @@ Given a set of samples from some real world distribution, attempting to minimize
 
 First, \eqref{eq:tractable-score} assumes that a score exists. This requires that the data distribution admit a density with respect to the Lebesgue measure that is differentiable and positive over the entire space. There is no reason to believe this is the case for the distribution of natural images. In fact, a commonly held belief is that the support of this natural distribution is some lower dimensional manifold to which the Lebesgue measure assigns no mass. Therefore, it is unrealistic to expect that this distribution admits density let alone a differentiable one.
 
-Moreover, the loss in \eqref{eq:tractable-score} is a weighted $L_2$ loss that enforces score matching in regions of high probability and discounts mismatches in low probability regions. This causes the learnt score to be innacurate in low probability regions. The aim being to apply a random walk algorithm that traverses the space, going from one high probability region to another, low accuracy score matching are likely to induce it in error. 
+Moreover, the loss in \eqref{eq:tractable-score} is a weighted $L_2$ loss that enforces score matching in regions of high probability and discounts mismatches in low probability regions. This causes the learnt score to be innacurate in low probability regions. The aim being to apply a random walk algorithm that traverses the space, going from one high probability region to another, low accuracy scores are likely to induce it in error. 
 
 Gaussian smoothing can address both these issues. Indeed, convolution by a Gaussian confers all the necessary regularity : first, convolution with a absolutely continuous distribution like the Gaussian guarantees the existence of a density with respect to the Lebesgue measure, second, since the Gaussian is infinitely supported, the density is positive everywhere, and finally the continuous differentiability of the Gaussian density is inherited by the density. Moreover, perturbation with a Gaussian with high enough variance increases the likelihood that samples will land in regions that were originally of low probability. This improves the score matching in those regions.
 
@@ -1251,7 +1273,7 @@ The addition of noise to the samples is therefore crucial to successfully match 
 
 \subsection{Learning the score in practice}
 
-Inspired by simulated annealing, the authors propose to perturb the data with a decreasing sequence of noise scales and learning, jointly, the scores of the decreasingly perturbed distributions. The proposed method consists of first setting a geometrically decreasing sequence of noise scales $\sigma_1 > \dots > \sigma_L$. A \textif{conditional}\footnote{Here, conditional is borrowed from the deep learning litterature, and simply means that the input variable is augmented with an additional input to \textit{condition} the output.} neural network $s_\theta(x, \sigma)$, referred to as a \textit{Noise Conditional Score Network}, is chosen to parametrize the $L$  vector fields that will be matched to the gradient fields associated to each of the perturbed distribution.
+We have just seen that perturbing the data is necessary. Instead of perturbing the data once, the authors propose to perturb the data with a decreasing sequence of noise scales and learning, jointly, the scores of the decreasingly perturbed distributions. The proposed method, inspired by simulated annealing, consists of first setting a geometrically decreasing sequence of noise scales $\sigma_1 > \dots > \sigma_L$. A \textif{conditional}\footnote{Here, conditional is borrowed from the deep learning litterature, and simply means that the input variable is augmented with an additional input to \textit{condition} the output.} neural network $s_\theta(x, \sigma)$, referred to as a \textit{Noise Conditional Score Network}, is chosen to parametrize the $L$  vector fields that will be matched to the gradient fields associated to each of the perturbed distribution.
 
 For each of the noise scales, the loss defined in \eqref{eq:tractable-score} is denoted $\ell(\theta, \sigma)$. The network is then trained to jointly minimize all those losses by enforcing the minimization of
 \[
@@ -1259,14 +1281,16 @@ For each of the noise scales, the loss defined in \eqref{eq:tractable-score} is 
 \]
 where $\lambda(\sigma_i)$ is a weighing coefficient set to $\sigma_i^2$ to ensure that the products \(\lambda(\sigma_i) \ell(\theta, \sigma_i)\) are roughly of the same order for each noise scale $\sigma_i$. 
 
-To learn the score of an image distribution, the authors recommend using an architecture that is well suited for image classification. In the experiments, a U-Net architecture is chosen to parametrize the vector fields, it is trained with Adam.
+To learn the score of an image distribution, the authors recommend using an architecture that is well suited for image classification. In the experiments, a U-Net architecture is chosen to parameterize the vector fields, it is trained with Adam. 
+
+The once unknown score of the distribution $\pi$ is now approximated by a sequence of score networks. 
 
 
 \subsection{Annealed Langevin Dynamics}
 
-Once the score network trained, the next step is now to sample from the distribution it represents using LMC. Although our ultimate goal is to sample from the data distribution, we know, from the discussion in \ref{sec:noise}, that the best we can do is to sample from the least perturbed distribution.
+With the trained score network in hand, the next step is to sample from the distribution it represents using LMC. Although our ultimate goal is to sample from the data distribution, we know, from the discussion in \ref{sec:noise}, that the best we can do is to sample from the least perturbed distribution.
 
-Following the simulated annealing inspiration, the authors propose that instead of directly attempting to sample from the least perturbed distribution, it is better to use the sequence of scores to progressively warm start LMC at each round. The algorithm proceeds as follows : an initial sample is drawn form a uniform distribution over the hypercube, then LMC is run for T steps to sample from $\pi_{\sigma_0}$, the output is then used to as the initial point for sampling from the next noise level. The pseudo-code is provided in \ref{alg:anneal}.
+Following the simulated annealing inspiration, the authors propose that instead of directly attempting to sample from the least perturbed distribution, it is better to use the sequence of scores to progressively warm start LMC at each round. The algorithm proceeds as follows : an initial sample is drawn form a uniform distribution over the hypercube, then LMC is run for T steps to sample from $\pi_{\sigma_0}$, the output is then used to as the initial point for sampling from the next noise level. The pseudo-code is provided in Algorithm \ref{alg:anneal}.
 
 \begin{algorithm}
 	\caption{Annealed Langevin dynamics.}
@@ -1286,38 +1310,40 @@ Following the simulated annealing inspiration, the authors propose that instead 
 	\end{algorithmic}
 \end{algorithm}
 
-What is suprising here are the chosen hyperparameters. The results were obtained with very few iterations of LMC for each noise level. The time T is kept constant for each noise level and the reported images were obtained for $T=100$, a very small value in view of the dimension dependence we expect from our convergence bounds.
 \subsection{Evaluation metrics}
 
-The small value of $T$ is only notable if the method is successful. We discuss the two metrics reported in the paper : the Inception score and the FID score. We briefly describe them to understand the properties they are evaluating.
+We discuss the two metrics reported in the paper to evaluate the results of the scheme we have just described. The Inception score and the FID score are measures of quality of the generated samples. We briefly describe them to understand the properties they are evaluating.
 
-\paragraph{Inception score} For a given generative model $G$, we write $X \sim G$, for the samples generated by $G$. We define the class distribution $\Prb_Y := \texttt{Inceptionv3(X)}$, where \texttt{Inceptionv3} is a convolutional neural network trained for classification on the same dataset $G$ was trained on. It outputs a distribution over the class labels. The Inception score IS$(G)$ is then defined as 
+\paragraph{Inception score} For a given generative model $G$, we write $X \sim G$, for the samples generated by $G$. We define the conditional class distribution $\Prb_{Y|X} := \texttt{Inceptionv3(X)}$, where \texttt{Inceptionv3} is a convolutional neural network trained for classification on the same dataset $G$ was trained on. It outputs a distribution over the class labels. The Inception score IS$(G)$ is then defined as 
 \[
-\text{IS}(G) = \exp \left(\E_{X \sim G} [KL(\Prb_{Y|X} || \Prb_Y)] \right).
+\text{IS}(G) = \exp \left(\E_{X \sim G} [\KL(\Prb_{Y|X} || \Prb_Y)] \right).
 \]
 
 \paragraph{FID score}  An improvement over the Inception score was proposed by \cite{heusel_gans_2017}. The \textit{Frechet Inception Distance}(FID) also makes use of a trained \texttt{Inceptionv3}. Two statistics, the mean and the variance, of the intermediate features extracted by the network are computed. These two quantities are then used to define a Gaussian random variable. The FID score is taken to be the Wassertein distance between this Gaussian and the one obtained from real data.
 
-In addition to these quantitative metrics, the authors provide uncurated images that they have sampled using their method. The images look compelling, although this remains a subjective judgment. A nearest neighbor analysis of a few samples, which consists of looking for the closest image in $\ell_2$ norm in the training dataset, reveals that the samples are not merely memorized. 
+According to these measures of success, the score based scheme is a successful one. At the time of publication, they achieved the best inception score on the CIFAR-10 dataset and report FID scores they deem competitive. In addition to these quantitative metrics, the authors provide uncurated images that they have sampled using their method. The images look compelling, to me. A nearest neighbor analysis of a few samples, which consists of looking for the closest image in $\ell_2$ norm in the training dataset, reveals that the samples are not merely memorized.
 
-According to these measures of success, it is reasonable to state that the NCNS + Annealed Langevin scheme is succesful in sampling from real image distributions.
+It is therefore reasonable to state that the Song and Ermon's scheme is successful in sampling from real image distributions.
 
 \subsection{Discussion}
 
+Currently, approaches that share strong similarities with \cite{song_generative_2019}, i.e score-based  one are leading the benchmarks for image generation.
+
 The least convincing part of the paper is the discussion in Section 3.2.2. There it is argued that since LMC is blind to the mixing coefficients it will struggle with sampling from mixtures. We know from our previous study of LMC that this is not the cause for the difficulty of sampling, it is merely because jumping from one mode to the other takes time when the modes are well separated.
 
-Other than this minor point, the paper does a great job at showing that LMC can be succesful is sampling from real world distributions. Many of the unjustified or hand-wavy arguments in the paper for choosing the constants are reevaluated and given more precision in a follow-up paper. Currently, approaches that share strong similarities with this one are the best at sampling from a wide array of image datasets.
+Other than this minor point, the paper does a great job at showing that LMC can be succesful is sampling from real world distributions. Many of the unjustified or hand-wavy arguments in the paper for choosing the constants are reevaluated and given more precision in a follow-up paper. 
 
 \section{Conclusion and open questions}
 
-Niles Weed result.
-SGD; adaptively preconditionned methods; dangers of SGD
+We began with the analysis of \eqref{eq:LMC} that relied on the existence of a log-Sobolev constant to derive a convergence bound. We then saw, through inspection of the behavior of \eqref{eq:LMC} around local minima, that good dependence on dimension of this constant was necessary for the convergence bound to be meaningful, otherwise, we would only guarantee convergence in a number of steps that rivals the complexity of naive grid based algorithm.  Finally, we argued that there may be evidence that the log-Sobolev constants in the real world are well behaved.
 
-What about saddle points ? A convergence bound involving weaker assumptions will allow us to prove the polynomial time escape from saddle points of perturbed gradient descent.
+The apparent success of score-based generative methods has already generated interest in providing explanations. The paper of \cite{block_fast_2020} claims that the manifold hypothesis can help explain the success of \eqref{eq:LMC} in sampling from images. They argue that dimensionality dependence involved in the dynamics is the dimension of the data manifold and not the dimension of the ambient space. Since this data manifold is believed to be low dimensional, the fast convergence of \eqref{eq:LMC} would follow. Another recent line of work, more theoretical, attempts to derive bounds for \eqref{eq:LSI} constants of measures convolved with Gaussian noise. They show that for a probability measure contained inside a ball of radius $R$, the \eqref{eq:LSI} constant will be at least $O(e^{-4R^2/t\sigma^2})$ when convolved with noise of variance $\sigma$. Sadly, gray-scale images are contained in a hyper-cube, and the ball containing it has radius $R = \sqrt{d}$. Therefore their results only yields an exponentially small lower bound, so it is unsatisfactory for our purposes. Justifications for the success of score-based generative models have therefore yet to emerge.
 
-Tools to analyze recurrences involving gradients and noise which is of high interest in machine learning.
+In addition to this, there are still a number of gaps left to understand the convergence of \eqref{eq:LMC}. Of particular interest is whether or not adaptively preconditioned versions of \eqref{eq:LMC} converge. For instance, the default implementation of Stochastic Gradient Langevin Dynamics, a variant of \eqref{eq:LMC}, of TensorFlow is preconditioned with RMSProp. There is to date no convincing proof that this algorithm, or any adaptively preconditioned scheme works.  
 
-There are currently not many works studying adaptively preconditionned methods. 
+A final line of inquiry that we can pursue from here are the questions surrounding the behavior of Stochastic Gradient Descent. The iterates of SGD loosely resemble those of \eqref{eq:LMC} except that they weigh the gradient more heavily than the noise contrary to \eqref{eq:LMC}. The same tools we reviewed in this report, like using a continuous time diffusion, invoking standard results like the Fokker-Planck equation and linearizing around a minimum, have been used to prove, for instance, that the empirical observation that parameter-dependent noise is better than isotropic noise for finding flat minima. 
+
+The danger here in wanting to use these methods to prove further results on SGD is that the diffusion approximation and the abstraction afforded by theory can lead to spurious results. The very recent paper \cite{ziyin_sgd_2021}, providing a nice set of counter examples to beliefs about SGD, claims to show that on the real line, a diffusion approximation of SGD can be made to have \textit{any} stationary measure, for \textit{any} loss function $f$ as long as we get to choose the noise covariance. They further conjecture that this is true in higher dimensions as well. Consequently, unless the noise is accurately modelled, it is possible to obtain misleading results. Establishing which types of questions on SGD the continuous time methods reviewed in this report can answer and which ones they cannot is an interesting direction for future research. 
 
 
 % An example of a floating figure using the graphicx package.
@@ -1459,21 +1485,14 @@ There are currently not many works studying adaptively preconditionned methods.
 % http://www.ctan.org/tex-archive/biblio/bibtex/contrib/doc/
 % The IEEEtran BibTeX style support page is at:
 % http://www.michaelshell.org/tex/ieeetran/bibtex/
-%\bibliographystyle{IEEEtran}
+\bibliographystyle{IEEEtran}
 % argument is your BibTeX string definitions and bibliography database(s)
-%\bibliography{IEEEabrv,../bib/paper}
+\bibliography{references.bib}
 %
 % <OR> manually copy in the resultant .bbl file
 % set second argument of \begin to the number of references
 % (used to reserve space for the reference number labels box)
-\begin{thebibliography}{1}
 
-\bibitem{mittelbach}
-F.~Mittelbach, M.~Goossens, J.~Braams, D.~Carlisle, and C.~Rowley, 
-\emph{The {\LaTeX}} Companion, 2nd~ed.\hskip 1em plus
-0.5em minus 0.4em\relax Addison-Wesley Professional, 2004.
-
-\end{thebibliography}
 
 % biography section
 % 
