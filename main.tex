@@ -26,7 +26,7 @@
 \usepackage{subcaption}
 \usepackage{url}% for url's in bib
 % for theorem hyperlink colors
-\usepackage[colorlinks,linkcolor=OliveGreen,citecolor=OliveGreen, pagebackref=true,backref=true]{hyperref}
+\usepackage[colorlinks,linkcolor=OliveGreen,citecolor=OliveGreen, backref=true]{hyperref}
 % \renewcommand*{\backref}[1]{\ifx#1\relax \else Page #1 \fi}
 \renewcommand*{\backrefalt}[4]{%
     \ifcase #1 \footnotesize{(Not cited.)}%
@@ -164,7 +164,7 @@
 
 \section{Introduction}
 
-In keeping with the tradition of secretive Monte Carlo research initiated by Ulam and Von Neuman, we will consider in this report the problem of sampling from a probability distribution $\pi$ while keeping secret our motivations for doing so. 
+In keeping with the tradition of secretive Monte Carlo research initiated by Ulam and Von Neuman \cite{eckhardt_stan_nodate}, we will consider in this report the problem of sampling from a probability distribution $\pi$ while keeping secret our motivations for doing so. 
 
 The considered distribution $\pi$, our target measure, is a probability measure over $\R^d$ that admits a density $p_\pi$ that can be expressed as
 \[
@@ -219,7 +219,7 @@ As Vempala and Wibisono's show, this convergence will hold even without convexit
 
 The main result of \cite{vempala_rapid_2019} is a bound on the decrease of $\KL$ divergence at each single step of \eqref{eq:LMC}, when going from $\bX_k$ to $\bX_{k+1}$. The convergence of the whole sequence is then obtained by induction. Two assumptions are needed for this result. The first is smoothness of the target potential. The second is a functional inequality called the log-Sobolev inequality \eqref{eq:LSI}, which we will examine shortly. Using only these two, Vempala and Wibisono prove the following theorem. 
 
-\begin{boxF}
+
 \begin{theorem}
 Let $\pi$ be a distribution satisfying the \eqref{eq:LSI} with constant $\alpha > 0$. If the potential is $L$-smooth, we have for any $\eta < \frac{\alpha}{4L^2}$, the following decrease at each step:
 \[
@@ -228,7 +228,7 @@ Let $\pi$ be a distribution satisfying the \eqref{eq:LSI} with constant $\alpha 
 where $\rho_k$ denotes the distribution of $\bX_k$.
 \label{thm:step}
 \end{theorem}
-\end{boxF}
+
 In this section, we will first discuss the \eqref{eq:LSI} assumption to get a better grasp of the scope of the result. We will then discuss the proof of Theorem \ref{thm:step}. After briefly mentioning the Renyi result, we will discuss the implications of the convergence bound.
 
 \subsection{The log-Sobolev inequality}
@@ -454,7 +454,7 @@ We can clearly from this result how small log-Sobolev constants affect the dynam
 
 We have seen in the previous section that the price to pay for a small log-Sobolev constant is time exponentially long in the dimension spent around local minimizers. The question now is to figure out where real world distributions lie. Do they live in the intractable realm of exponentially small LSI constants ?
 
-To try to answer this question, we study in this section the work of Song and Ermon \cite{song_generative_2019}. Their paper proposes the following method for sampling from real world distributions:  first learn the score from available data using a neural network then sample from the learnt score using Langevin Monte Carlo. A naive application of this idea yields samples of poor quality and the authors show that, for this approach to work, the perturbation of the data by noise is instrumental.
+To try to answer this question, we study in this section the work of Song and Ermon \cite{song_generative_2019}. Their paper proposes the following method for sampling from real world distributions:  first learn the \textit{score}, i.e  $\nabla \log (p_\pi)$ from available data using a neural network then sample from the learnt score using Langevin Monte Carlo. A naive application of this idea yields samples of poor quality and the authors show that, for this approach to work, the perturbation of the data by noise is instrumental.
 
 We discuss their method in detail by first explaining how the score is learnt, then we describe the proposed LMC scheme and finish by arguing that the demonstrated success of \cite{song_generative_2019} provides strong support for the view that the real world is tractable.
 
