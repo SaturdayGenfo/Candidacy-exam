@@ -157,7 +157,7 @@
 \maketitle
 
 \begin{abstract}
-    Langevin Monte Carlo (LMC) is a Markov Chain Monte Carlo sampling method that generate samples by adding gradient information to Gaussian noise. Since it queries only local information, we might expect it to have all the limitations of local methods like Gradient Descent. The presence of noise, however, makes LMC capable of provably sampling from a large class of distributions for which global information cannot be inferred from local queries. 
+    Langevin Monte Carlo (LMC) is a Markov Chain Monte Carlo sampling method that generates samples by adding gradient information to Gaussian noise. Since it queries only local information, we might expect it to have all the limitations of local methods like Gradient Descent. The presence of noise, however, makes LMC capable of provably sampling from a large class of distributions for which global information cannot be inferred from local queries. 
     
     This statement was proved by Vempala and Wibisono in \cite{vempala_rapid_2019} under two mild assumptions. This will be the starting point of our report. We will then see that, although their work shows the region of tractability for LMC extends beyond strong log-concavity, there is a potential exponential blow-up of constants in the convergence bound that ensures that the computational hardness of non-convexity is never violated. Tzen et al's trajectory-wise analysis of LMC \cite{tzen_local_2018} will shed some light on the causes of this exponential blow-up of convergence time. With this understanding, we will naturally ask whether or not this blow-up occurs when trying to sample from real world distributions. By discussing the success of Song and Ermon's work \cite{song_generative_2019} using LMC to generate natural images, we will finish by arguing that the real world may well be within the tractable region.
 \end{abstract}
@@ -233,7 +233,7 @@ In this section, we will first discuss the \eqref{eq:LSI} assumption to get a be
 
 \subsection{The log-Sobolev inequality}
 
-The main assumptions the authors of \cite{vempala_rapid_2019} is one they refer to as an \textit{isoperimetric} assumption. In particular, they assume that $\pi$ verifies the log-Sobolev inequality. This inequality relates the KL divergence from $\pi$ to the relative Fisher information with respect to $\pi$. It is defined as follows.
+The main assumptions the authors of \cite{vempala_rapid_2019} make is one they refer to as an \textit{isoperimetric} assumption. In particular, they assume that $\pi$ verifies the log-Sobolev inequality. This inequality relates the KL divergence from $\pi$ to the relative Fisher information with respect to $\pi$. It is defined as follows.
 
 \begin{definition}
   There exists $\alpha >0$ such that for any probability measure $\nu$ over $\R^d$ such that $\KL(\nu || \pi) < \infty$, we have
@@ -274,7 +274,7 @@ To establish Theorem \ref{thm:step}, the first step is to observe that a single 
 
 \begin{equation}
     \begin{cases}
-        d{X}_t ={\color{MidnightBlue} \nabla f(\bX_k)}dt + \sqrt{2}dB_t \\
+        d{X}_t = -{\color{MidnightBlue} \nabla f(\bX_k)}dt + \sqrt{2}dB_t \\
         {X}_0 = {\bX_k}
     \end{cases}.
     \label{eq:interp}
@@ -285,11 +285,11 @@ Notice that the {\color{MidnightBlue}drift term} is independent of ${X}_t$ and t
 Now, our goal is to know how the $KL$ divergence from $\pi$ evolves when going from $\bX_k$ to $\bX_{k+1}$. Using our interpolated process this means we want to know how the continuous object $t \mapsto \KL(p_t || \pi)$ evolves between $t=0$ and $t=\eta$. To do so we compute its time derivative :
 
 \begin{equation}
-    \frac{d}{dt}\KL(\rho_t || \pi) = \int_{\mathbb{R}^d} {\color{BrickRed} \frac{\partial \rho_t}{\partial t}}(x)\ln\frac{\rho_t(x)}{\pi(x)}dx.
+    \frac{d}{dt}\KL(p_t || \pi) = \int_{\mathbb{R}^d} {\color{BrickRed} \frac{\partial p_t}{\partial t}}(x)\ln\frac{p_t(x)}{\pi(x)}dx.
     \label{eq:kl-deriv}
 \end{equation}
 
-From \eqref{eq:kl-deriv}, we see that in order to know the behavior of the $\KL$ divergence, we need to know how the density of $p_t$ of $\hat{X}_t$ evolves, i.e, we need to know ${\color{BrickRed} \frac{\partial \rho_t}{\partial t}}(x)$. 
+From \eqref{eq:kl-deriv}, we see that in order to know the behavior of the $\KL$ divergence, we need to know how the density of $p_t$ of $\hat{X}_t$ evolves, i.e, we need to know ${\color{BrickRed} \frac{\partial p_t}{\partial t}}(x)$. 
 
 Luckily for us, since \eqref{eq:interp} is a constant drift diffusion, when conditionned on $\bX_k$, the time derivative $\frac{\partial}{\partial t}{p}_{t|\bX_k}$ of the conditional density is given to us by a standard formula : the Fokker-Planck equation \cite{pavliotis_fokkerplanck_2014}. Once we have the evolution of the conditionned density, we can integrate with respect to $\bX_k$ to determine the evolution of the unconditional density $\frac{\partial}{\partial t}{{p}}_{t}$. This requires a few interchanges between derivatives and expectations.
 
@@ -299,7 +299,7 @@ Luckily for us, since \eqref{eq:interp} is a constant drift diffusion, when cond
 
 \paragraph{} Plugging in \eqref{eq:kl-deriv} the formula for the unconditional density determined through this interchange, we find that
 \begin{equation}
-    \frac{d}{dt}\KL(\rho_t || \pi) \leq  {\color{Fuchsia}-\frac{3}{4}I(\rho_t || \pi)} + {\color{Bittersweet}\E\left[\| \nabla f(\hat{X}_t) - \nabla f(\bX_k) \|_2^2\right]}.
+    \frac{d}{dt}\KL(\rho_t || \pi) \leq  {\color{Fuchsia}-\frac{3}{4}I(\rho_t || \pi)} + {\color{Bittersweet}\E\left[\| \nabla f({X}_t) - \nabla f(\bX_k) \|_2^2\right]}.
     \label{eq:bound}
 \end{equation}
 
